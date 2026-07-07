@@ -7,8 +7,8 @@ const $ = (id) => document.getElementById(id);
 
 /* ---------- Estado ---------- */
 const DEFAULT_STATE = {
-  profile: { nombre: "", peso: "", altura: "", edad: "", sexo: "m", actividad: "1.375" },
-  goals: { kcal: 2200, protein: 140, carbs: 220, fat: 70, water: 8 },
+  profile: { nombre: "", peso: "", altura: "", edad: "", sexo: "m", actividad: "1.375", objetivo: "maintain" },
+  goals: { kcal: 2200, protein: 140, carbs: 220, fat: 70 },
   days: {},
   currentDate: null,
   apiKey: "",
@@ -96,12 +96,28 @@ const App = {
     this.save();
     renderAll();
   },
-  addWater(amount) {
-    const day = this.currentDay();
-    day.water = Math.max(0, day.water + amount);
+  /* Gasto energético (Mifflin-St Jeor) + macros según objetivo.
+     Proteína en el rango ISSN 1.6–2.2 g/kg; grasa 25% kcal; carbos el resto. */
+  computeMacros() {
+    const { peso, altura, edad, sexo, actividad, objetivo } = this.state.profile;
+    if (!peso || !altura || !edad) return null;
+    const bmr = 10 * peso + 6.25 * altura - 5 * edad + (sexo === "m" ? 5 : -161);
+    const tdee = Math.round(bmr * +actividad);
+    const factor = objetivo === "cut" ? 0.8 : objetivo === "bulk" ? 1.1 : 1;
+    const gkg = objetivo === "cut" ? 2.0 : 1.8;
+    const kcal = Math.round((tdee * factor) / 10) * 10;
+    const protein = Math.round((peso * gkg) / 5) * 5;
+    const fat = Math.round((kcal * 0.25) / 9 / 5) * 5;
+    const carbs = Math.max(20, Math.round((kcal - protein * 4 - fat * 9) / 4 / 5) * 5);
+    return { tdee, kcal, protein, carbs, fat };
+  },
+  applyMacros() {
+    const m = this.computeMacros();
+    if (!m) return null;
+    Object.assign(this.state.goals, { kcal: m.kcal, protein: m.protein, carbs: m.carbs, fat: m.fat });
     this.save();
     renderAll();
-    return day.water;
+    return m;
   },
 };
 
@@ -165,18 +181,6 @@ function renderHoy() {
     $("b" + key).style.width = Math.min(100, (val / goal) * 100) + "%";
   }
 
-  // agua
-  $("waterCount").textContent = day.water;
-  $("editWaterGoal").textContent = g.water;
-  const cups = $("waterCups");
-  cups.innerHTML = "";
-  for (let i = 0; i < g.water; i++) {
-    const c = document.createElement("div");
-    c.className = "cup" + (i < day.water ? " full" : "");
-    c.style.transitionDelay = `${i * 30}ms`;
-    cups.appendChild(c);
-  }
-
   // comidas
   const list = $("mealList");
   list.innerHTML = "";
@@ -231,7 +235,7 @@ function renderLog() {
 
   // lista de días con registros
   const entries = Object.entries(App.state.days)
-    .filter(([, d]) => d.meals.length || d.water)
+    .filter(([, d]) => d.meals.length)
     .sort((a, b) => b[0].localeCompare(a[0]))
     .slice(0, 30);
   const list = $("logList");
@@ -244,7 +248,7 @@ function renderLog() {
     btn.className = "log-item";
     btn.innerHTML = `
       <span class="log-date">${App.formatDate(key, { weekday: "long", day: "numeric", month: "short" })}</span>
-      <span class="log-meta">${day.meals.length} comida${day.meals.length === 1 ? "" : "s"} · 💧${day.water}</span>
+      <span class="log-meta">${day.meals.length} comida${day.meals.length === 1 ? "" : "s"}</span>
       <span class="log-kcal">${tot.kcal} kcal</span>`;
     btn.addEventListener("click", () => { App.setDate(key); switchView("hoy"); });
     li.appendChild(btn);
@@ -254,23 +258,21 @@ function renderLog() {
 
 function renderConfig() {
   const { profile: p, goals: g } = App.state;
-  $("pNombre").value = p.nombre; $("pPeso").value = p.peso; $("pAltura").value = p.altura;
+  $("pNombre").value = p.nombre; $("pObjetivo").value = p.objetivo || "maintain";
+  $("pPeso").value = p.peso; $("pAltura").value = p.altura;
   $("pEdad").value = p.edad; $("pSexo").value = p.sexo; $("pActividad").value = p.actividad;
   $("gKcalIn").value = g.kcal; $("gProteinIn").value = g.protein; $("gCarbsIn").value = g.carbs;
-  $("gFatIn").value = g.fat; $("gWaterIn").value = g.water;
+  $("gFatIn").value = g.fat;
   $("apiKeyIn").value = App.state.apiKey;
   renderTdee();
   renderApiStatus();
 }
 
 function renderTdee() {
-  const { peso, altura, edad, sexo, actividad } = App.state.profile;
-  const hint = $("tdeeHint");
-  if (!peso || !altura || !edad) { hint.textContent = ""; return; }
-  // Mifflin-St Jeor (fórmula estándar de gasto energético)
-  const bmr = 10 * peso + 6.25 * altura - 5 * edad + (sexo === "m" ? 5 : -161);
-  const tdee = Math.round(bmr * +actividad);
-  hint.textContent = `⚡ Tu gasto estimado (Mifflin-St Jeor) es ~${tdee} kcal/día para mantener tu peso.`;
+  const m = App.computeMacros();
+  $("tdeeHint").textContent = m
+    ? `Tu gasto estimado (Mifflin-St Jeor) es ~${m.tdee} kcal/día. Sugerencia para tu objetivo: ${m.kcal} kcal · P ${m.protein}g · C ${m.carbs}g · G ${m.fat}g.`
+    : "Completa peso, altura y edad para calcular tus macros.";
 }
 
 function renderApiStatus() {
@@ -287,7 +289,7 @@ function renderChat() {
   if (!App.state.chat.length) {
     App.state.chat.push({
       role: "bot",
-      text: "¡Hola! 👋 Soy JimmiteoBot, tu coach de nutrición.\n\nPuedo registrar lo que comes, cambiar tus metas y fechas, sumar agua y recomendarte libros y videos verificados de salud. Prueba los botones de abajo o escríbeme 👇",
+      text: "¡Hola! 👋 Soy JimmiteoBot, tu coach de nutrición.\n\nPuedo registrar lo que comes, calcular y cambiar tus metas, moverte de fecha y recomendarte libros y videos verificados de salud. Prueba los botones de abajo o escríbeme 👇",
     });
   }
   for (const m of App.state.chat) {
@@ -507,17 +509,12 @@ function bindEvents() {
 
   // metas rápidas
   $("editKcalGoal").addEventListener("click", (e) => { e.stopPropagation(); goalModal("kcal", "calorías", "kcal"); });
-  $("editWaterGoal").addEventListener("click", (e) => { e.stopPropagation(); goalModal("water", "agua", "vasos"); });
   document.querySelectorAll(".macro").forEach((el) =>
     el.addEventListener("click", () => {
       const f = el.dataset.macro;
       goalModal(f, GOAL_LABEL[f], "g");
     })
   );
-
-  // agua
-  $("waterPlus").addEventListener("click", () => App.addWater(1));
-  $("waterMinus").addEventListener("click", () => App.addWater(-1));
 
   // comidas
   $("addMealBtn").addEventListener("click", () => mealModal());
@@ -560,6 +557,7 @@ function bindEvents() {
       renderAll();
     });
   bindField("pNombre", App.state.profile, "nombre");
+  bindField("pObjetivo", App.state.profile, "objetivo", renderTdee);
   bindField("pPeso", App.state.profile, "peso", renderTdee);
   bindField("pAltura", App.state.profile, "altura", renderTdee);
   bindField("pEdad", App.state.profile, "edad", renderTdee);
@@ -569,7 +567,14 @@ function bindEvents() {
   bindField("gProteinIn", App.state.goals, "protein");
   bindField("gCarbsIn", App.state.goals, "carbs");
   bindField("gFatIn", App.state.goals, "fat");
-  bindField("gWaterIn", App.state.goals, "water");
+
+  // cálculo automático de macros según el perfil
+  $("calcMacrosBtn").addEventListener("click", () => {
+    const m = App.applyMacros();
+    if (!m) { toast("Completa peso, altura y edad primero ⚠️"); return; }
+    renderConfig();
+    toast(`Metas actualizadas: ${m.kcal} kcal · P ${m.protein} · C ${m.carbs} · G ${m.fat} ⚡`);
+  });
   $("apiKeyIn").addEventListener("change", (e) => {
     App.state.apiKey = e.target.value.trim();
     App.save();
@@ -629,8 +634,26 @@ function bindEvents() {
   document.addEventListener("keydown", (e) => e.key === "Escape" && closeModal());
 }
 
+/* ---------- partículas del fondo ---------- */
+function initParticles() {
+  const wrap = $("particles");
+  if (!wrap || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  for (let i = 0; i < 22; i++) {
+    const p = document.createElement("div");
+    p.className = "particle";
+    const size = 1.5 + Math.random() * 2.5;
+    p.style.width = p.style.height = size + "px";
+    p.style.left = Math.random() * 100 + "%";
+    p.style.animationDuration = 9 + Math.random() * 14 + "s";
+    p.style.animationDelay = -Math.random() * 20 + "s";
+    if (Math.random() < 0.35) { p.style.background = "#818cf8"; p.style.boxShadow = "0 0 6px rgba(129,140,248,.8)"; }
+    wrap.appendChild(p);
+  }
+}
+
 /* ---------- init ---------- */
 App.load();
 bindEvents();
 renderAll();
 renderApiStatus();
+initParticles();

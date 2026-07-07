@@ -37,15 +37,20 @@ const BOT_TOOLS = [
   },
   {
     name: "set_goal",
-    description: "Cambia una meta diaria del usuario: calorías, proteína, carbohidratos, grasa o vasos de agua.",
+    description: "Cambia una meta diaria del usuario: calorías, proteína, carbohidratos o grasa.",
     input_schema: {
       type: "object",
       properties: {
-        field: { type: "string", enum: ["kcal", "protein", "carbs", "fat", "water"] },
+        field: { type: "string", enum: ["kcal", "protein", "carbs", "fat"] },
         value: { type: "number" },
       },
       required: ["field", "value"],
     },
+  },
+  {
+    name: "calculate_macros",
+    description: "Calcula y aplica automáticamente las metas de calorías y macros del usuario a partir de su perfil (peso, altura, edad, sexo, actividad y objetivo) usando Mifflin-St Jeor y guías ISSN. Úsala cuando pida calcular sus macros o pregunte cuántas calorías debería comer.",
+    input_schema: { type: "object", properties: {} },
   },
   {
     name: "set_date",
@@ -56,19 +61,10 @@ const BOT_TOOLS = [
       required: ["date"],
     },
   },
-  {
-    name: "add_water",
-    description: "Suma (o resta con negativo) vasos de agua al día actual.",
-    input_schema: {
-      type: "object",
-      properties: { amount: { type: "number", description: "Vasos a sumar; negativo para restar" } },
-      required: ["amount"],
-    },
-  },
 ];
 
 /* ---------- Ejecutor de acciones (compartido por modo local e IA) ---------- */
-const GOAL_LABEL = { kcal: "calorías", protein: "proteína", carbs: "carbos", fat: "grasa", water: "agua" };
+const GOAL_LABEL = { kcal: "calorías", protein: "proteína", carbs: "carbos", fat: "grasa" };
 
 function runBotAction(name, input) {
   switch (name) {
@@ -91,17 +87,18 @@ function runBotAction(name, input) {
       if (!(field in GOAL_LABEL)) return "Meta no válida.";
       const value = Math.max(1, Math.round(+input.value || 0));
       App.setGoal(field, value);
-      const unit = field === "kcal" ? "kcal" : field === "water" ? "vasos" : "g";
+      const unit = field === "kcal" ? "kcal" : "g";
       return `🎯 Nueva meta de ${GOAL_LABEL[field]}: ${value} ${unit}`;
+    }
+    case "calculate_macros": {
+      const m = App.applyMacros();
+      if (!m) return "Faltan datos del perfil (peso, altura o edad). Pídele al usuario que los complete en Ajustes.";
+      return `⚡ Macros calculados y aplicados: ${m.kcal} kcal · Proteína ${m.protein}g · Carbos ${m.carbs}g · Grasa ${m.fat}g (gasto estimado: ${m.tdee} kcal/día)`;
     }
     case "set_date": {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date || "")) return "Fecha no válida (usa YYYY-MM-DD).";
       App.setDate(input.date);
       return `📅 Fecha cambiada a ${App.formatDate(input.date)}`;
-    }
-    case "add_water": {
-      const n = App.addWater(Math.round(+input.amount || 0));
-      return `💧 Agua del día: ${n} vasos`;
     }
     default:
       return "Acción desconocida.";
@@ -113,12 +110,18 @@ function stateSummary() {
   const s = App.state;
   const t = App.dayTotals();
   const g = s.goals;
+  const p = s.profile;
+  const OBJ = { cut: "perder grasa", maintain: "mantener", bulk: "ganar músculo" };
+  const perfil = [
+    p.nombre && `nombre ${p.nombre}`, p.peso && `${p.peso} kg`, p.altura && `${p.altura} cm`,
+    p.edad && `${p.edad} años`, `objetivo: ${OBJ[p.objetivo] || "mantener"}`,
+  ].filter(Boolean).join(", ");
   const meals = App.currentDay().meals.map((m, i) => `${i}. ${m.name} (${m.kcal} kcal, P${m.protein} C${m.carbs} G${m.fat})`).join("\n") || "(sin comidas)";
   return [
     `Fecha activa: ${s.currentDate} (hoy es ${App.todayKey()})`,
-    `Usuario: ${s.profile.nombre || "sin nombre"}${s.profile.peso ? `, ${s.profile.peso} kg` : ""}`,
-    `Metas diarias: ${g.kcal} kcal · proteína ${g.protein}g · carbos ${g.carbs}g · grasa ${g.fat}g · agua ${g.water} vasos`,
-    `Consumido en la fecha activa: ${t.kcal} kcal · P ${t.protein}g · C ${t.carbs}g · G ${t.fat}g · agua ${App.currentDay().water} vasos`,
+    `Perfil del usuario: ${perfil}`,
+    `Metas diarias: ${g.kcal} kcal · proteína ${g.protein}g · carbos ${g.carbs}g · grasa ${g.fat}g`,
+    `Consumido en la fecha activa: ${t.kcal} kcal · P ${t.protein}g · C ${t.carbs}g · G ${t.fat}g`,
     `Comidas de la fecha activa:\n${meals}`,
   ].join("\n");
 }
@@ -129,7 +132,7 @@ function systemPrompt() {
   const tips = KNOWLEDGE.tips.map((t) => `- ${t.text} (Fuente: ${t.source})`).join("\n");
   return `Eres JimmiteoBot, el coach de nutrición y salud dentro de la app JimmiteoBot. Hablas español, eres cercano, motivador y breve (2-5 frases, usa emojis con moderación).
 
-Puedes EDITAR la app con tus herramientas: registrar/eliminar comidas, cambiar metas, cambiar la fecha activa y sumar agua. Úsalas siempre que el usuario lo pida, sin pedir confirmación para acciones simples.
+Puedes EDITAR la app con tus herramientas: registrar/eliminar comidas, cambiar metas, calcular macros automáticamente desde el perfil y cambiar la fecha activa. Úsalas siempre que el usuario lo pida, sin pedir confirmación para acciones simples. Si pregunta cuántas calorías o macros debería comer, usa calculate_macros.
 
 REGLAS DE VERACIDAD (muy importante):
 - Solo recomienda libros y videos de esta lista verificada. Nunca inventes títulos, autores, estudios ni cifras.
@@ -232,28 +235,33 @@ async function analyzeFoodPhoto(base64jpeg) {
    MODO LOCAL — comandos en español sin API key
    ========================================================== */
 const GOAL_WORDS = [
-  [/prote/i, "protein"], [/carb/i, "carbs"], [/gras/i, "fat"],
-  [/calor|kcal/i, "kcal"], [/agua/i, "water"],
+  [/prote/i, "protein"], [/carb/i, "carbs"], [/gras/i, "fat"], [/calor|kcal/i, "kcal"],
 ];
 
 function localBot(text) {
   const t = text.toLowerCase().trim();
   const reply = (text, actions = []) => ({ text, actions });
 
+  // Calcular macros: "calcula mis macros", "¿cuántas calorías debería comer?"
+  if (/(calcula|calcúlame|calculame).*(macro|calor|meta)|cu[aá]nt[ao]s?\s+(calor|prote).*(deber|debo|tengo que)/.test(t)) {
+    const m = App.applyMacros();
+    if (!m) return reply("Para calcular tus macros necesito tu peso, altura y edad. Complétalos en Ajustes ⚙️ y vuelve a pedírmelo.");
+    return reply(
+      `Según tu perfil y tu objetivo, estas son tus metas (fórmula Mifflin-St Jeor + guías ISSN):\n` +
+      `🔥 ${m.kcal} kcal · 🥩 ${m.protein}g proteína · 🍚 ${m.carbs}g carbos · 🥑 ${m.fat}g grasa\n` +
+      `Tu gasto diario estimado es ~${m.tdee} kcal. ¡Ya las apliqué en la app!`,
+      [`⚡ Macros calculados y aplicados: ${m.kcal} kcal · P ${m.protein}g · C ${m.carbs}g · G ${m.fat}g`]
+    );
+  }
+
   // Cambiar meta: "cambia mi meta de proteína a 150"
-  const goalMatch = t.match(/meta[^0-9]*?(prote\w*|carb\w*|gras\w*|calor\w*|kcal|agua)[^0-9]*?(\d+)/);
+  const goalMatch = t.match(/meta[^0-9]*?(prote\w*|carb\w*|gras\w*|calor\w*|kcal)[^0-9]*?(\d+)/);
   if (goalMatch) {
     const field = (GOAL_WORDS.find(([re]) => re.test(goalMatch[1])) || [])[1];
     if (field) {
       const msg = runBotAction("set_goal", { field, value: +goalMatch[2] });
       return reply("¡Hecho! Meta actualizada. 💪", [msg]);
     }
-  }
-
-  // Agua: "agrega un vaso de agua", "tomé 2 vasos"
-  if (/agua|vaso/.test(t) && /agrega|añade|toma|tomé|tome|suma|\+|bebi|bebí/.test(t)) {
-    const n = +(t.match(/(\d+)/) || [])[1] || 1;
-    return reply("¡Bien hidratado! 💧", [runBotAction("add_water", { amount: n })]);
   }
 
   // Borrar comida: "borra la última comida"
@@ -316,7 +324,6 @@ function localBot(text) {
     return reply(
       `📊 Hoy llevas ${tt.kcal} de ${g.kcal} kcal (${rest > 0 ? `te quedan ${rest}` : `¡${-rest} por encima!`}).\n` +
       `🥩 Proteína ${tt.protein}/${g.protein}g · 🍚 Carbos ${tt.carbs}/${g.carbs}g · 🥑 Grasa ${tt.fat}/${g.fat}g\n` +
-      `💧 Agua: ${App.currentDay().water}/${g.water} vasos.\n` +
       (tt.protein < g.protein * 0.5 ? "Consejo: prioriza la proteína en tu próxima comida 💪" : "¡Vas muy bien, sigue así! 🔥")
     );
   }
@@ -324,16 +331,17 @@ function localBot(text) {
   // Saludo
   if (/^(hola|hey|buenas|hi|holi)/.test(t)) {
     const name = App.state.profile.nombre;
-    return reply(`¡Hola${name ? " " + name : ""}! 👋 Soy JimmiteoBot. Puedo registrar tus comidas, cambiar tus metas, sumar agua y recomendarte libros y videos verificados de salud. ¿En qué te ayudo?`);
+    return reply(`¡Hola${name ? " " + name : ""}! 👋 Soy JimmiteoBot. Puedo registrar tus comidas, calcular y cambiar tus metas, y recomendarte libros y videos verificados de salud. ¿En qué te ayudo?`);
   }
 
   // Fallback
   return reply(
     "Estoy en modo local 🤖 (sin API key). Puedo hacer esto:\n" +
     "• «Comí arroz con pollo» → registro la comida\n" +
+    "• «Calcula mis macros» → metas según tu perfil\n" +
     "• «Cambia mi meta de proteína a 150»\n" +
-    "• «Agrega un vaso de agua» / «Borra la última comida»\n" +
-    "• «¿Cómo voy hoy?» / «Recomiéndame un libro / video / consejo»\n\n" +
+    "• «Borra la última comida» / «¿Cómo voy hoy?»\n" +
+    "• «Recomiéndame un libro / video / consejo»\n\n" +
     "Para conversación libre y análisis de fotos, agrega tu API key de Anthropic en Ajustes ⚙️✨"
   );
 }

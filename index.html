@@ -3,30 +3,40 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#05070f">
+  <meta name="theme-color" content="#020617">
   <title>JimmiteoBot · Tu coach de nutrición con IA</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@400;500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 100 100'><text y='.9em' font-size='90'>🤖</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='3' y='6' width='18' height='14' rx='4' fill='%2338bdf8'/><circle cx='9' cy='13' r='2' fill='%23020617'/><circle cx='15' cy='13' r='2' fill='%23020617'/><rect x='11' y='2' width='2' height='4' rx='1' fill='%23818cf8'/></svg>">
 </head>
 <body>
-  <!-- Fondo animado -->
-  <div class="bg-blobs" aria-hidden="true">
-    <div class="blob blob-1"></div>
-    <div class="blob blob-2"></div>
-    <div class="blob blob-3"></div>
+  <!-- Fondo animado: aurora + grid + partículas -->
+  <div class="bg" aria-hidden="true">
+    <div class="bg-grid"></div>
+    <div class="aurora aurora-1"></div>
+    <div class="aurora aurora-2"></div>
+    <div class="scanline"></div>
+    <div class="particles" id="particles"></div>
   </div>
 
   <div class="app">
     <!-- Header -->
     <header class="header">
       <div class="brand">
-        <div class="brand-logo">🤖</div>
+        <div class="brand-logo">
+          <svg viewBox="0 0 24 24" width="24" height="24" fill="none">
+            <rect x="3" y="7" width="18" height="13" rx="4" stroke="#020617" stroke-width="2"/>
+            <circle cx="9" cy="13.5" r="1.6" fill="#020617"/>
+            <circle cx="15" cy="13.5" r="1.6" fill="#020617"/>
+            <path d="M12 7V3.5" stroke="#020617" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="12" cy="3" r="1.4" fill="#020617"/>
+          </svg>
+        </div>
         <div class="brand-text">
           <h1>JIMMITEO<span>BOT</span></h1>
-          <p class="brand-tag">tu coach de nutrición</p>
+          <p class="brand-tag">NUTRICIÓN · IA</p>
         </div>
       </div>
       <button class="date-pill" id="datePill" title="Toca para cambiar la fecha">
@@ -44,13 +54,13 @@
       </div>
 
       <!-- Anillo de calorías -->
-      <section class="card ring-card">
+      <section class="card ring-card glow">
         <div class="ring-wrap">
           <svg viewBox="0 0 200 200" class="ring-svg" role="img" aria-label="Progreso de calorías">
             <defs>
               <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#22d3ee"/>
-                <stop offset="100%" stop-color="#8b5cf6"/>
+                <stop offset="0%" stop-color="#38bdf8"/>
+                <stop offset="100%" stop-color="#818cf8"/>
               </linearGradient>
             </defs>
             <circle class="ring-track" cx="100" cy="100" r="84"/>
@@ -83,30 +93,19 @@
         </div>
       </section>
 
-      <!-- Agua -->
-      <section class="card water-card">
-        <div class="water-info">
-          <span class="water-emoji">💧</span>
-          <div>
-            <div class="water-title">Agua</div>
-            <div class="water-count"><b id="waterCount">0</b> de <button class="inline-edit" id="editWaterGoal">8</button> vasos</div>
-          </div>
-        </div>
-        <div class="water-cups" id="waterCups"></div>
-        <div class="water-btns">
-          <button class="icon-btn" id="waterMinus" aria-label="Quitar vaso">−</button>
-          <button class="icon-btn accent" id="waterPlus" aria-label="Agregar vaso">+</button>
-        </div>
-      </section>
-
       <!-- Foto de tu comida -->
       <section class="card photo-card" id="photoCard">
         <input type="file" id="photoInput" accept="image/*" capture="environment" hidden>
         <div class="photo-inner" id="photoInner">
-          <div class="photo-icon">📸</div>
+          <div class="photo-icon">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#38bdf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+              <path d="M3 8a2 2 0 0 1 2-2h1.5l1.2-2h8.6l1.2 2H19a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>
+              <circle cx="12" cy="13" r="3.6"/>
+            </svg>
+          </div>
           <div>
             <div class="photo-title">Foto de tu comida</div>
-            <div class="photo-sub">La IA calcula las calorías y macros por ti</div>
+            <div class="photo-sub">La IA calcula calorías y macros por ti</div>
           </div>
           <span class="photo-cta">ANALIZAR</span>
         </div>
@@ -123,7 +122,7 @@
           <button class="btn-small" id="addMealBtn">+ Agregar</button>
         </div>
         <ul class="meal-list" id="mealList"></ul>
-        <div class="empty" id="mealEmpty">Aún no registras comidas hoy.<br>Usa la foto 📸, el botón <b>+ Agregar</b> o pídeselo al bot 🤖</div>
+        <div class="empty" id="mealEmpty">Aún no registras comidas en este día.<br>Usa la foto, el botón <b>+ Agregar</b> o pídeselo al bot.</div>
       </section>
     </main>
 
@@ -150,15 +149,19 @@
         <div class="chat" id="chatList"></div>
       </div>
       <div class="chips" id="chatChips">
-        <button class="chip" data-q="¿Cómo voy hoy?">📊 ¿Cómo voy hoy?</button>
-        <button class="chip" data-q="Recomiéndame un libro">📚 Un libro</button>
-        <button class="chip" data-q="Recomiéndame un video">🎬 Un video</button>
-        <button class="chip" data-q="Dame un consejo de salud">💡 Consejo</button>
-        <button class="chip" data-q="Cambia mi meta de proteína a 150">🎯 Cambiar meta</button>
+        <button class="chip" data-q="¿Cómo voy hoy?">¿Cómo voy hoy?</button>
+        <button class="chip" data-q="Calcula mis macros">Calcula mis macros</button>
+        <button class="chip" data-q="Recomiéndame un libro">Un libro</button>
+        <button class="chip" data-q="Recomiéndame un video">Un video</button>
+        <button class="chip" data-q="Dame un consejo de salud">Consejo</button>
       </div>
       <form class="chat-input" id="chatForm">
         <input type="text" id="chatText" placeholder="Escríbele a JimmiteoBot…" autocomplete="off">
-        <button type="submit" class="send-btn" aria-label="Enviar">➤</button>
+        <button type="submit" class="send-btn" aria-label="Enviar">
+          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+            <path d="M4 12h14M13 5l7 7-7 7"/>
+          </svg>
+        </button>
       </form>
     </main>
 
@@ -167,9 +170,16 @@
       <h2 class="view-title">Ajustes</h2>
 
       <section class="card form-card">
-        <h3>👤 Tu perfil</h3>
+        <h3><span class="h-accent"></span>Tu perfil</h3>
         <div class="form-grid">
           <label>Nombre<input type="text" id="pNombre" placeholder="Tu nombre"></label>
+          <label>Objetivo
+            <select id="pObjetivo">
+              <option value="cut">Perder grasa</option>
+              <option value="maintain">Mantener</option>
+              <option value="bulk">Ganar músculo</option>
+            </select>
+          </label>
           <label>Peso (kg)<input type="number" id="pPeso" min="20" max="300" step="0.1"></label>
           <label>Altura (cm)<input type="number" id="pAltura" min="100" max="230"></label>
           <label>Edad<input type="number" id="pEdad" min="10" max="110"></label>
@@ -179,38 +189,39 @@
               <option value="f">Femenino</option>
             </select>
           </label>
-          <label>Actividad
+          <label style="grid-column:1/-1">Actividad
             <select id="pActividad">
-              <option value="1.2">Sedentario</option>
-              <option value="1.375">Ligera</option>
-              <option value="1.55">Moderada</option>
-              <option value="1.725">Alta</option>
+              <option value="1.2">Sedentario (poco o nada de ejercicio)</option>
+              <option value="1.375">Ligera (1–3 días/semana)</option>
+              <option value="1.55">Moderada (3–5 días/semana)</option>
+              <option value="1.725">Alta (6–7 días/semana)</option>
             </select>
           </label>
         </div>
+        <button class="btn btn-primary btn-wide" id="calcMacrosBtn">⚡ Calcular mis macros</button>
         <div class="tdee-hint" id="tdeeHint"></div>
       </section>
 
       <section class="card form-card">
-        <h3>🎯 Metas diarias</h3>
+        <h3><span class="h-accent"></span>Metas diarias</h3>
+        <p class="form-note">Puedes ajustarlas a mano, pedírselas al bot en el chat o usar «Calcular mis macros» arriba.</p>
         <div class="form-grid">
           <label>Calorías (kcal)<input type="number" id="gKcalIn" min="800" max="6000"></label>
           <label>Proteína (g)<input type="number" id="gProteinIn" min="20" max="400"></label>
           <label>Carbos (g)<input type="number" id="gCarbsIn" min="20" max="800"></label>
           <label>Grasa (g)<input type="number" id="gFatIn" min="10" max="250"></label>
-          <label>Agua (vasos)<input type="number" id="gWaterIn" min="1" max="20"></label>
         </div>
       </section>
 
       <section class="card form-card">
-        <h3>🤖 Cerebro del bot (Claude API)</h3>
+        <h3><span class="h-accent"></span>Cerebro del bot (Claude API)</h3>
         <p class="form-note">Pega tu API key de Anthropic para activar el análisis de fotos y el chat inteligente. Sin key, el bot funciona en modo local con comandos básicos. La key se guarda solo en este dispositivo.</p>
         <label>API key<input type="password" id="apiKeyIn" placeholder="sk-ant-…"></label>
         <div class="api-status" id="apiStatus"></div>
       </section>
 
       <section class="card form-card">
-        <h3>💾 Tus datos</h3>
+        <h3><span class="h-accent"></span>Tus datos</h3>
         <div class="row-btns">
           <button class="btn-small" id="exportBtn">Exportar</button>
           <button class="btn-small" id="importBtn">Importar</button>
@@ -219,15 +230,31 @@
         </div>
       </section>
 
-      <p class="credits">JimmiteoBot 2.0 · hecho con 💚 y ciencia verificada</p>
+      <p class="credits">JIMMITEOBOT 2.0 · ciencia verificada</p>
     </main>
 
     <!-- Nav inferior -->
     <nav class="tabbar">
-      <button class="tab tab-active" data-view="hoy"><span class="tab-ico">☀️</span>Hoy</button>
-      <button class="tab" data-view="log"><span class="tab-ico">📈</span>Log</button>
-      <button class="tab" data-view="bot"><span class="tab-ico">🤖</span>Bot<span class="tab-glow"></span></button>
-      <button class="tab" data-view="config"><span class="tab-ico">⚙️</span>Ajustes</button>
+      <button class="tab tab-active" data-view="hoy">
+        <svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
+          <circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/>
+        </svg>Hoy
+      </button>
+      <button class="tab" data-view="log">
+        <svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
+          <path d="M5 20V13M12 20V6M19 20v-4"/>
+        </svg>Log
+      </button>
+      <button class="tab" data-view="bot">
+        <svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
+          <rect x="4" y="8" width="16" height="12" rx="4"/><circle cx="9.5" cy="13.5" r="0.8" fill="currentColor"/><circle cx="14.5" cy="13.5" r="0.8" fill="currentColor"/><path d="M12 8V4.5"/><circle cx="12" cy="4" r="1"/>
+        </svg>Bot<span class="tab-glow"></span>
+      </button>
+      <button class="tab" data-view="config">
+        <svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
+          <path d="M4 8h10M18 8h2M4 16h2M10 16h10"/><circle cx="16" cy="8" r="2.2"/><circle cx="8" cy="16" r="2.2"/>
+        </svg>Ajustes
+      </button>
     </nav>
   </div>
 
