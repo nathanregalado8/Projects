@@ -3,21 +3,20 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#020617">
+  <meta name="theme-color" content="#FFF9F2">
   <title>JimmiteoBot · Tu coach de nutrición con IA</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='3' y='6' width='18' height='14' rx='4' fill='%2338bdf8'/><circle cx='9' cy='13' r='2' fill='%23020617'/><circle cx='15' cy='13' r='2' fill='%23020617'/><rect x='11' y='2' width='2' height='4' rx='1' fill='%23818cf8'/></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='3' y='6' width='18' height='14' rx='5' fill='%23FF5A3C'/><circle cx='9' cy='13' r='2' fill='%23FFF9F2'/><circle cx='15' cy='13' r='2' fill='%23FFF9F2'/><rect x='11' y='2' width='2' height='4' rx='1' fill='%23FF8A00'/></svg>">
 </head>
 <body>
-  <!-- Fondo animado: aurora + grid + partículas -->
+  <!-- Fondo animado: blobs cítricos + burbujas -->
   <div class="bg" aria-hidden="true">
-    <div class="bg-grid"></div>
-    <div class="aurora aurora-1"></div>
-    <div class="aurora aurora-2"></div>
-    <div class="scanline"></div>
+    <div class="blob blob-1"></div>
+    <div class="blob blob-2"></div>
+    <div class="blob blob-3"></div>
     <div class="particles" id="particles"></div>
   </div>
 
@@ -27,11 +26,11 @@
       <div class="brand">
         <div class="brand-logo">
           <svg viewBox="0 0 24 24" width="24" height="24" fill="none">
-            <rect x="3" y="7" width="18" height="13" rx="4" stroke="#020617" stroke-width="2"/>
-            <circle cx="9" cy="13.5" r="1.6" fill="#020617"/>
-            <circle cx="15" cy="13.5" r="1.6" fill="#020617"/>
-            <path d="M12 7V3.5" stroke="#020617" stroke-width="2" stroke-linecap="round"/>
-            <circle cx="12" cy="3" r="1.4" fill="#020617"/>
+            <rect x="3" y="7" width="18" height="13" rx="5" stroke="#fff" stroke-width="2"/>
+            <circle cx="9" cy="13.5" r="1.6" fill="#fff"/>
+            <circle cx="15" cy="13.5" r="1.6" fill="#fff"/>
+            <path d="M12 7V3.5" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
+            <circle cx="12" cy="3" r="1.4" fill="#fff"/>
           </svg>
         </div>
         <div class="brand-text">
@@ -49,36 +48,31 @@
     <main class="view view-active" id="view-hoy">
       <div class="date-nav">
         <button class="icon-btn" id="prevDay" aria-label="Día anterior">‹</button>
-        <h2 id="dayTitle">Hoy</h2>
+        <div class="date-nav-center">
+          <h2 id="dayTitle">Hoy</h2>
+          <span class="streak" id="streakChip" hidden>🔥 <b id="streakDays">0</b> días</span>
+        </div>
         <button class="icon-btn" id="nextDay" aria-label="Día siguiente">›</button>
       </div>
 
-      <!-- Anillo de calorías -->
-      <section class="card ring-card glow">
-        <div class="ring-wrap">
-          <svg viewBox="0 0 200 200" class="ring-svg" role="img" aria-label="Progreso de calorías">
-            <defs>
-              <linearGradient id="ringGrad" x1="0%" y1="0%" x2="100%" y2="100%">
-                <stop offset="0%" stop-color="#38bdf8"/>
-                <stop offset="100%" stop-color="#818cf8"/>
-              </linearGradient>
-            </defs>
-            <circle class="ring-track" cx="100" cy="100" r="84"/>
-            <circle class="ring-progress" id="ringProgress" cx="100" cy="100" r="84"/>
-          </svg>
-          <div class="ring-center">
-            <div class="ring-kcal" id="ringKcal">0</div>
-            <div class="ring-sub">de <button class="inline-edit" id="editKcalGoal">2200</button> kcal</div>
-            <div class="ring-rest" id="ringRest"></div>
-          </div>
+      <!-- Héroe de calorías (estilo intercambiable) -->
+      <section class="card hero-card" id="heroCard">
+        <button class="hero-switch" id="heroSwitch" title="Cambiar estilo de visualización">
+          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h13M13 3l4 4-4 4M20 17H7M11 13l-4 4 4 4"/></svg>
+          <span id="heroModeLabel">auto</span>
+        </button>
+        <div class="hero-stage" id="heroStage"></div>
+        <div class="hero-meta">
+          <span>meta <button class="inline-edit" id="editKcalGoal">2200</button> kcal</span>
+          <span class="hero-rest" id="heroRest"></span>
         </div>
 
         <!-- Macros -->
         <div class="macros">
           <button class="macro" data-macro="protein" title="Toca para editar tu meta">
-            <div class="macro-head"><span class="macro-dot" style="--c:#8b5cf6"></span>Proteína</div>
+            <div class="macro-head"><span class="macro-dot" style="--c:#7c3aed"></span>Proteína</div>
             <div class="macro-val"><b id="mProtein">0</b>/<span id="gProtein">140</span> g</div>
-            <div class="macro-bar"><div class="macro-fill" id="bProtein" style="--c:#8b5cf6"></div></div>
+            <div class="macro-bar"><div class="macro-fill" id="bProtein" style="--c:#7c3aed"></div></div>
           </button>
           <button class="macro" data-macro="carbs" title="Toca para editar tu meta">
             <div class="macro-head"><span class="macro-dot" style="--c:#d97706"></span>Carbos</div>
@@ -86,11 +80,22 @@
             <div class="macro-bar"><div class="macro-fill" id="bCarbs" style="--c:#d97706"></div></div>
           </button>
           <button class="macro" data-macro="fat" title="Toca para editar tu meta">
-            <div class="macro-head"><span class="macro-dot" style="--c:#f43f5e"></span>Grasa</div>
+            <div class="macro-head"><span class="macro-dot" style="--c:#e11d48"></span>Grasa</div>
             <div class="macro-val"><b id="mFat">0</b>/<span id="gFat">70</span> g</div>
-            <div class="macro-bar"><div class="macro-fill" id="bFat" style="--c:#f43f5e"></div></div>
+            <div class="macro-bar"><div class="macro-fill" id="bFat" style="--c:#e11d48"></div></div>
           </button>
         </div>
+      </section>
+
+      <!-- Peso -->
+      <section class="card weight-card">
+        <div class="weight-main">
+          <div class="weight-label">Peso</div>
+          <div class="weight-now"><b id="weightNow">—</b><small id="weightUnit"> kg</small></div>
+          <div class="weight-trend" id="weightTrend"></div>
+        </div>
+        <svg class="spark" id="weightSpark" viewBox="0 0 120 44" preserveAspectRatio="none" aria-hidden="true"></svg>
+        <button class="btn-small" id="logWeightBtn">+ Registrar</button>
       </section>
 
       <!-- Foto de tu comida -->
@@ -98,7 +103,7 @@
         <input type="file" id="photoInput" accept="image/*" capture="environment" hidden>
         <div class="photo-inner" id="photoInner">
           <div class="photo-icon">
-            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#38bdf8" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
+            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#FF5A3C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
               <path d="M3 8a2 2 0 0 1 2-2h1.5l1.2-2h8.6l1.2 2H19a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>
               <circle cx="12" cy="13" r="3.6"/>
             </svg>
@@ -129,6 +134,18 @@
     <!-- ============ VISTA: LOG ============ -->
     <main class="view" id="view-log">
       <h2 class="view-title">Historial</h2>
+
+      <section class="card">
+        <div class="chart-head">
+          <h3>Peso · últimas semanas</h3>
+          <span class="chart-tag" id="weightRange"></span>
+        </div>
+        <div class="weight-chart-wrap">
+          <svg class="weight-chart" id="weightChart" viewBox="0 0 340 150" role="img" aria-label="Gráfica de peso de las últimas semanas"></svg>
+          <div class="empty" id="weightEmpty">Registra tu peso en la pestaña Hoy para ver tu progreso aquí.</div>
+        </div>
+      </section>
+
       <section class="card">
         <div class="chart-head">
           <h3>Calorías · últimos 7 días</h3>
@@ -136,6 +153,7 @@
         </div>
         <div class="week-chart" id="weekChart" role="img" aria-label="Gráfica de calorías de los últimos 7 días"></div>
       </section>
+
       <section class="card">
         <h3 class="log-title">Días registrados</h3>
         <ul class="log-list" id="logList"></ul>
@@ -151,8 +169,8 @@
       <div class="chips" id="chatChips">
         <button class="chip" data-q="¿Cómo voy hoy?">¿Cómo voy hoy?</button>
         <button class="chip" data-q="Calcula mis macros">Calcula mis macros</button>
+        <button class="chip" data-q="Peso 78.5">Registrar peso</button>
         <button class="chip" data-q="Recomiéndame un libro">Un libro</button>
-        <button class="chip" data-q="Recomiéndame un video">Un video</button>
         <button class="chip" data-q="Dame un consejo de salud">Consejo</button>
       </div>
       <form class="chat-input" id="chatForm">
@@ -170,6 +188,18 @@
       <h2 class="view-title">Ajustes</h2>
 
       <section class="card form-card">
+        <h3><span class="h-accent"></span>Unidades</h3>
+        <div class="units-row">
+          <div class="seg" id="segWeight">
+            <button data-u="kg" class="seg-on">kg</button><button data-u="lb">lb</button>
+          </div>
+          <div class="seg" id="segHeight">
+            <button data-u="cm" class="seg-on">cm</button><button data-u="ft">ft/in</button>
+          </div>
+        </div>
+      </section>
+
+      <section class="card form-card">
         <h3><span class="h-accent"></span>Tu perfil</h3>
         <div class="form-grid">
           <label>Nombre<input type="text" id="pNombre" placeholder="Tu nombre"></label>
@@ -180,8 +210,14 @@
               <option value="bulk">Ganar músculo</option>
             </select>
           </label>
-          <label>Peso (kg)<input type="number" id="pPeso" min="20" max="300" step="0.1"></label>
-          <label>Altura (cm)<input type="number" id="pAltura" min="100" max="230"></label>
+          <label>Peso (<span class="wUnitLbl">kg</span>)<input type="number" id="pPeso" min="20" max="700" step="0.1"></label>
+          <label id="alturaCmWrap">Altura (cm)<input type="number" id="pAltura" min="100" max="230"></label>
+          <label id="alturaFtWrap" hidden>Altura (ft / in)
+            <span class="dual">
+              <input type="number" id="pAlturaFt" min="3" max="7" placeholder="5">
+              <input type="number" id="pAlturaIn" min="0" max="11" placeholder="9">
+            </span>
+          </label>
           <label>Edad<input type="number" id="pEdad" min="10" max="110"></label>
           <label>Sexo
             <select id="pSexo">

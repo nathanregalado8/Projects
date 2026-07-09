@@ -10,6 +10,9 @@ const DEFAULT_STATE = {
   profile: { nombre: "", peso: "", altura: "", edad: "", sexo: "m", actividad: "1.375", objetivo: "maintain" },
   goals: { kcal: 2200, protein: 140, carbs: 220, fat: 70 },
   days: {},
+  weights: {},            // { 'YYYY-MM-DD': kg }
+  units: { weight: "kg", height: "cm" },
+  heroStyle: "auto",      // auto | liquid | battery | hero
   currentDate: null,
   apiKey: "",
   chat: [],
@@ -39,6 +42,9 @@ const App = {
       this.state = structuredClone(DEFAULT_STATE);
     }
     if (!this.state.currentDate) this.state.currentDate = this.todayKey();
+    this.state.weights ||= {};
+    this.state.units ||= { weight: "kg", height: "cm" };
+    this.state.heroStyle ||= "auto";
   },
   save() {
     localStorage.setItem(STORE_KEY, JSON.stringify(this.state));
@@ -46,7 +52,7 @@ const App = {
 
   currentDay() {
     const key = this.state.currentDate;
-    if (!this.state.days[key]) this.state.days[key] = { meals: [], water: 0 };
+    if (!this.state.days[key]) this.state.days[key] = { meals: [] };
     return this.state.days[key];
   },
   dayTotals(key = this.state.currentDate) {
@@ -57,12 +63,20 @@ const App = {
     );
   },
 
+  /* --- unidades --- */
+  kgToUnit(kg) { return this.state.units.weight === "lb" ? kg * 2.20462 : kg; },
+  unitToKg(v) { return this.state.units.weight === "lb" ? v / 2.20462 : v; },
+  fmtWeight(kg, decimals = 1) {
+    return `${(+this.kgToUnit(kg)).toFixed(decimals)} ${this.state.units.weight}`;
+  },
+
   /* --- acciones (usadas por la UI y por el bot) --- */
   addMeal(meal) {
     const entry = { id: Date.now() + Math.random(), time: new Date().toTimeString().slice(0, 5), ...meal };
     this.currentDay().meals.push(entry);
     this.save();
     renderAll();
+    sparkBurst();
     return entry;
   },
   updateMeal(id, patch) {
@@ -96,6 +110,34 @@ const App = {
     this.save();
     renderAll();
   },
+  logWeight(kg, key = this.state.currentDate) {
+    kg = Math.round(kg * 10) / 10;
+    this.state.weights[key] = kg;
+    this.state.profile.peso = kg; // mantiene el cálculo de macros al día
+    this.save();
+    renderAll();
+    return kg;
+  },
+  weightSeries(days = 42) {
+    const from = this.shiftKey(this.todayKey(), -days);
+    return Object.entries(this.state.weights)
+      .filter(([k]) => k >= from && k <= this.todayKey())
+      .sort((a, b) => a[0].localeCompare(b[0]))
+      .map(([k, v]) => ({ key: k, kg: v }));
+  },
+  latestWeight() {
+    const all = Object.entries(this.state.weights).sort((a, b) => a[0].localeCompare(b[0]));
+    return all.length ? { key: all[all.length - 1][0], kg: all[all.length - 1][1] } : null;
+  },
+  streak() {
+    let n = 0;
+    let key = this.todayKey();
+    const has = (k) => (this.state.days[k]?.meals?.length || 0) > 0;
+    if (!has(key)) key = this.shiftKey(key, -1); // el día en curso aún no rompe la racha
+    while (has(key)) { n++; key = this.shiftKey(key, -1); }
+    return n;
+  },
+
   /* Gasto energético (Mifflin-St Jeor) + macros según objetivo.
      Proteína en el rango ISSN 1.6–2.2 g/kg; grasa 25% kcal; carbos el resto. */
   computeMacros() {
@@ -124,14 +166,12 @@ const App = {
 /* ==========================================================
    UI — render
    ========================================================== */
-const RING_LEN = 2 * Math.PI * 84; // circunferencia del anillo
-
 function animateNumber(el, to) {
   const from = +el.dataset.val || 0;
   if (from === to) { el.textContent = to; return; }
   el.dataset.val = to;
   const start = performance.now();
-  const dur = 700;
+  const dur = 800;
   function tick(now) {
     const p = Math.min(1, (now - start) / dur);
     const eased = 1 - Math.pow(1 - p, 3);
@@ -149,6 +189,99 @@ const FOOD_EMOJIS = [
 ];
 const foodEmoji = (name) => (FOOD_EMOJIS.find(([re]) => re.test(name)) || [, "🍽️"])[1];
 
+/* ---------- héroe de calorías (3 estilos) ---------- */
+const HERO_MODES = ["liquid", "battery", "hero"];
+const HERO_NAMES = { auto: "auto", liquid: "líquido", battery: "energía", hero: "número" };
+
+function activeHeroMode() {
+  const pref = App.state.heroStyle;
+  if (pref !== "auto") return pref;
+  const dayN = Math.floor(new Date(App.state.currentDate + "T12:00:00").getTime() / 86400000);
+  return HERO_MODES[dayN % 3]; // rota día a día
+}
+
+const WAVE_PATH = "M0,12 C10,4 20,4 30,12 C40,20 50,20 60,12 C70,4 80,4 90,12 C100,20 110,20 120,12 L120,26 L0,26 Z";
+
+function renderHero(t, g) {
+  const stage = $("heroStage");
+  const mode = activeHeroMode();
+  const pct = Math.min(1, t.kcal / g.kcal);
+  const over = t.kcal > g.kcal;
+
+  if (stage.dataset.mode !== mode) {
+    stage.dataset.mode = mode;
+    if (mode === "liquid") {
+      stage.innerHTML = `
+        <div class="liquid-wrap">
+          <div class="liquid-water" id="lqWater">
+            <svg class="liquid-wave" viewBox="0 0 120 26" preserveAspectRatio="none"><path d="${WAVE_PATH}"/></svg>
+            <svg class="liquid-wave w2" viewBox="0 0 120 26" preserveAspectRatio="none"><path d="${WAVE_PATH}"/></svg>
+          </div>
+          <div class="liquid-kcal"><span id="heroKcal">0</span><small>KCAL</small></div>
+        </div>`;
+    } else if (mode === "battery") {
+      stage.innerHTML = `
+        <div class="batt-wrap">
+          <div class="batt-num"><span id="heroKcal">0</span><small> kcal</small></div>
+          <div class="batt" id="battRow">${'<div class="batt-cell"></div>'.repeat(12)}</div>
+        </div>`;
+    } else {
+      stage.innerHTML = `
+        <div class="hero-num-wrap">
+          <div class="hero-kcal" id="heroKcal">0</div>
+          <div class="hero-kcal-lbl">kcal consumidas</div>
+          <div class="hero-bar"><div class="hero-bar-fill" id="heroBarFill"></div></div>
+        </div>`;
+    }
+  }
+
+  animateNumber($("heroKcal"), t.kcal);
+  $("heroModeLabel").textContent = HERO_NAMES[App.state.heroStyle];
+
+  if (mode === "liquid") {
+    const water = $("lqWater");
+    water.style.height = Math.max(0, pct * 100) + "%";
+    water.classList.toggle("over", over);
+    water.querySelectorAll(".liquid-wave path").forEach((p) => p.style.fill = over ? "#F43F5E" : "#FF8A00");
+  } else if (mode === "battery") {
+    const cells = $("battRow").children;
+    const on = Math.round(pct * cells.length);
+    [...cells].forEach((c, i) => {
+      setTimeout(() => {
+        c.classList.toggle("on", i < on);
+        c.classList.toggle("hot", over);
+      }, i * 45);
+    });
+  } else {
+    const fill = $("heroBarFill");
+    fill.style.width = pct * 100 + "%";
+    fill.classList.toggle("over", over);
+  }
+}
+
+/* chispas al registrar comida */
+function sparkBurst() {
+  const card = $("heroCard");
+  if (!card || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
+  const burst = document.createElement("div");
+  burst.className = "spark-burst";
+  burst.style.left = "50%";
+  burst.style.top = "40%";
+  const colors = ["#FF5A3C", "#FF8A00", "#84CC16", "#7C3AED", "#FFC53C"];
+  for (let i = 0; i < 16; i++) {
+    const p = document.createElement("div");
+    p.className = "spark-p";
+    const ang = (Math.PI * 2 * i) / 16 + Math.random() * 0.5;
+    const dist = 60 + Math.random() * 70;
+    p.style.setProperty("--dx", Math.cos(ang) * dist + "px");
+    p.style.setProperty("--dy", Math.sin(ang) * dist - 20 + "px");
+    p.style.background = colors[i % colors.length];
+    burst.appendChild(p);
+  }
+  card.appendChild(burst);
+  setTimeout(() => burst.remove(), 950);
+}
+
 function renderHoy() {
   const s = App.state;
   const t = App.dayTotals();
@@ -161,16 +294,17 @@ function renderHoy() {
   $("dateInput").value = s.currentDate;
   $("dayTitle").textContent = isToday ? "Hoy" : App.formatDate(s.currentDate, { weekday: "long", day: "numeric", month: "long" });
 
-  // anillo
-  const pct = Math.min(1, t.kcal / g.kcal);
-  const ring = $("ringProgress");
-  ring.style.strokeDashoffset = RING_LEN * (1 - pct);
-  ring.classList.toggle("over", t.kcal > g.kcal);
-  animateNumber($("ringKcal"), t.kcal);
+  // racha
+  const st = App.streak();
+  $("streakChip").hidden = st < 2;
+  $("streakDays").textContent = st;
+
+  // héroe
+  renderHero(t, g);
   $("editKcalGoal").textContent = g.kcal;
   const rest = g.kcal - t.kcal;
-  const restEl = $("ringRest");
-  restEl.textContent = rest >= 0 ? `te quedan ${rest} kcal` : `${-rest} kcal por encima`;
+  const restEl = $("heroRest");
+  restEl.textContent = rest >= 0 ? `te quedan ${rest}` : `${-rest} por encima`;
   restEl.classList.toggle("over", rest < 0);
 
   // macros
@@ -180,6 +314,9 @@ function renderHoy() {
     $("g" + key).textContent = goal;
     $("b" + key).style.width = Math.min(100, (val / goal) * 100) + "%";
   }
+
+  // peso
+  renderWeightCard();
 
   // comidas
   const list = $("mealList");
@@ -192,7 +329,7 @@ function renderHoy() {
       <span class="meal-emoji">${foodEmoji(m.name)}</span>
       <div class="meal-info">
         <div class="meal-name">${escapeHtml(m.name)}</div>
-        <div class="meal-macros"><i>🥩 ${m.protein}g</i><i>🍚 ${m.carbs}g</i><i>🥑 ${m.fat}g</i>${m.time ? `<i>🕐 ${m.time}</i>` : ""}</div>
+        <div class="meal-macros"><i>P ${m.protein}g</i><i>C ${m.carbs}g</i><i>G ${m.fat}g</i>${m.time ? `<i>${m.time}</i>` : ""}</div>
       </div>
       <div class="meal-kcal">${m.kcal}<small> kcal</small></div>
       <div class="meal-actions">
@@ -203,10 +340,121 @@ function renderHoy() {
   });
 }
 
+/* ---------- peso: tarjeta compacta + sparkline ---------- */
+function renderWeightCard() {
+  const latest = App.latestWeight();
+  const unit = App.state.units.weight;
+  $("weightUnit").textContent = " " + unit;
+  if (!latest) {
+    $("weightNow").textContent = "—";
+    $("weightTrend").textContent = "registra tu primer peso";
+    $("weightTrend").className = "weight-trend flat";
+    $("weightSpark").innerHTML = "";
+    return;
+  }
+  $("weightNow").textContent = App.kgToUnit(latest.kg).toFixed(1);
+
+  // tendencia vs ~7 días antes del último registro
+  const series = App.weightSeries(60);
+  const weekAgoKey = App.shiftKey(latest.key, -6);
+  const prev = [...series].reverse().find((p) => p.key <= weekAgoKey);
+  const trendEl = $("weightTrend");
+  if (prev) {
+    const diff = App.kgToUnit(latest.kg - prev.kg);
+    const abs = Math.abs(diff).toFixed(1);
+    if (Math.abs(diff) < 0.05) { trendEl.textContent = "estable esta semana"; trendEl.className = "weight-trend flat"; }
+    else if (diff < 0) { trendEl.textContent = `▼ ${abs} ${unit} esta semana`; trendEl.className = "weight-trend down"; }
+    else { trendEl.textContent = `▲ ${abs} ${unit} esta semana`; trendEl.className = "weight-trend up"; }
+  } else {
+    trendEl.textContent = App.formatDate(latest.key);
+    trendEl.className = "weight-trend flat";
+  }
+
+  // sparkline (últimos 14 registros)
+  const pts = series.slice(-14);
+  const svg = $("weightSpark");
+  if (pts.length < 2) { svg.innerHTML = ""; return; }
+  const kgs = pts.map((p) => p.kg);
+  const min = Math.min(...kgs), max = Math.max(...kgs);
+  const pad = (max - min) < 0.5 ? 0.5 : (max - min) * 0.15;
+  const y = (v) => 40 - ((v - (min - pad)) / ((max + pad) - (min - pad))) * 36;
+  const x = (i) => (i / (pts.length - 1)) * 116 + 2;
+  const line = pts.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.kg).toFixed(1)}`).join(" ");
+  svg.innerHTML = `
+    <defs><linearGradient id="sparkGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#16a34a"/><stop offset="100%" stop-color="#16a34a" stop-opacity="0"/>
+    </linearGradient></defs>
+    <path class="spark-area" d="${line} L${x(pts.length - 1).toFixed(1)},44 L2,44 Z"/>
+    <path d="${line}"/>
+    <circle cx="${x(pts.length - 1).toFixed(1)}" cy="${y(pts[pts.length - 1].kg).toFixed(1)}" r="3"/>`;
+}
+
+/* ---------- peso: gráfica grande (Log) ---------- */
+function renderWeightChart() {
+  const svg = $("weightChart");
+  const series = App.weightSeries(42); // ~6 semanas
+  const empty = $("weightEmpty");
+  const unit = App.state.units.weight;
+
+  if (series.length < 2) {
+    svg.innerHTML = "";
+    svg.style.display = "none";
+    empty.style.display = "block";
+    $("weightRange").textContent = "";
+    return;
+  }
+  svg.style.display = "block";
+  empty.style.display = "none";
+
+  const W = 340, H = 150, L = 8, R = 34, T = 14, B = 22;
+  const kgs = series.map((p) => p.kg);
+  const min = Math.min(...kgs), max = Math.max(...kgs);
+  const pad = (max - min) < 1 ? 0.8 : (max - min) * 0.18;
+  const lo = min - pad, hi = max + pad;
+  const t0 = new Date(series[0].key + "T12:00:00").getTime();
+  const t1 = new Date(series[series.length - 1].key + "T12:00:00").getTime();
+  const x = (k) => {
+    const t = new Date(k + "T12:00:00").getTime();
+    return t1 === t0 ? L : L + ((t - t0) / (t1 - t0)) * (W - L - R);
+  };
+  const y = (v) => T + (1 - (v - lo) / (hi - lo)) * (H - T - B);
+
+  const line = series.map((p, i) => `${i ? "L" : "M"}${x(p.key).toFixed(1)},${y(p.kg).toFixed(1)}`).join(" ");
+  const gridVals = [lo + (hi - lo) * 0.25, lo + (hi - lo) * 0.75];
+  const dots = series.map((p, i) => {
+    const last = i === series.length - 1;
+    return `<circle class="w-dot ${last ? "w-dot-end" : ""}" cx="${x(p.key).toFixed(1)}" cy="${y(p.kg).toFixed(1)}" r="${last ? 5 : 3.5}">
+      <title>${App.formatDate(p.key)}: ${App.fmtWeight(p.kg)}</title></circle>`;
+  }).join("");
+
+  // etiquetas de fecha: inicio, medio, fin
+  const mid = series[Math.floor(series.length / 2)];
+  const xLbls = [[series[0], "start"], [mid, "middle"], [series[series.length - 1], "end"]]
+    .map(([p, anchor]) => `<text class="axis-lbl" x="${x(p.key).toFixed(1)}" y="${H - 6}" text-anchor="${anchor}">${App.formatDate(p.key, { day: "numeric", month: "short" })}</text>`)
+    .join("");
+
+  const lastP = series[series.length - 1];
+  svg.innerHTML = `
+    <defs><linearGradient id="wAreaGrad" x1="0" y1="0" x2="0" y2="1">
+      <stop offset="0%" stop-color="#16a34a" stop-opacity="0.35"/><stop offset="100%" stop-color="#16a34a" stop-opacity="0"/>
+    </linearGradient></defs>
+    ${gridVals.map((v) => `<line class="grid-line" x1="${L}" x2="${W - R}" y1="${y(v).toFixed(1)}" y2="${y(v).toFixed(1)}"/>`).join("")}
+    <path class="w-area" fill="url(#wAreaGrad)" d="${line} L${x(lastP.key).toFixed(1)},${H - B} L${L},${H - B} Z"/>
+    <path class="w-line" d="${line}"/>
+    ${dots}
+    <text class="val-lbl" x="${Math.min(x(lastP.key) + 8, W - 2).toFixed(1)}" y="${(y(lastP.kg) + 4).toFixed(1)}">${App.kgToUnit(lastP.kg).toFixed(1)}</text>
+    ${xLbls}`;
+
+  const first = series[0];
+  const diff = App.kgToUnit(lastP.kg - first.kg);
+  $("weightRange").textContent = `${diff <= 0 ? "▼" : "▲"} ${Math.abs(diff).toFixed(1)} ${unit} en ${series.length} registros`;
+}
+
 function renderLog() {
   const g = App.state.goals;
+  renderWeightChart();
 
-  // gráfica de 7 días (termina en la fecha activa o hoy, lo que sea mayor)
+  // gráfica de 7 días
   const end = App.todayKey();
   const keys = Array.from({ length: 7 }, (_, i) => App.shiftKey(end, i - 6));
   const totals = keys.map((k) => App.dayTotals(k).kcal);
@@ -248,7 +496,7 @@ function renderLog() {
     btn.className = "log-item";
     btn.innerHTML = `
       <span class="log-date">${App.formatDate(key, { weekday: "long", day: "numeric", month: "short" })}</span>
-      <span class="log-meta">${day.meals.length} comida${day.meals.length === 1 ? "" : "s"}</span>
+      <span class="log-meta">${day.meals.length} comida${day.meals.length === 1 ? "" : "s"}${App.state.weights[key] ? ` · ⚖ ${App.fmtWeight(App.state.weights[key])}` : ""}</span>
       <span class="log-kcal">${tot.kcal} kcal</span>`;
     btn.addEventListener("click", () => { App.setDate(key); switchView("hoy"); });
     li.appendChild(btn);
@@ -257,13 +505,34 @@ function renderLog() {
 }
 
 function renderConfig() {
-  const { profile: p, goals: g } = App.state;
+  const { profile: p, goals: g, units: u } = App.state;
   $("pNombre").value = p.nombre; $("pObjetivo").value = p.objetivo || "maintain";
-  $("pPeso").value = p.peso; $("pAltura").value = p.altura;
   $("pEdad").value = p.edad; $("pSexo").value = p.sexo; $("pActividad").value = p.actividad;
   $("gKcalIn").value = g.kcal; $("gProteinIn").value = g.protein; $("gCarbsIn").value = g.carbs;
   $("gFatIn").value = g.fat;
   $("apiKeyIn").value = App.state.apiKey;
+
+  // unidades
+  document.querySelectorAll("#segWeight button").forEach((b) => b.classList.toggle("seg-on", b.dataset.u === u.weight));
+  document.querySelectorAll("#segHeight button").forEach((b) => b.classList.toggle("seg-on", b.dataset.u === u.height));
+  document.querySelectorAll(".wUnitLbl").forEach((el) => (el.textContent = u.weight));
+
+  // peso mostrado en la unidad elegida
+  $("pPeso").value = p.peso ? App.kgToUnit(p.peso).toFixed(1) : "";
+
+  // altura: cm o ft/in
+  $("alturaCmWrap").hidden = u.height !== "cm";
+  $("alturaFtWrap").hidden = u.height !== "ft";
+  if (u.height === "cm") {
+    $("pAltura").value = p.altura || "";
+  } else if (p.altura) {
+    const totalIn = p.altura / 2.54;
+    $("pAlturaFt").value = Math.floor(totalIn / 12);
+    $("pAlturaIn").value = Math.round(totalIn % 12);
+  } else {
+    $("pAlturaFt").value = ""; $("pAlturaIn").value = "";
+  }
+
   renderTdee();
   renderApiStatus();
 }
@@ -280,7 +549,6 @@ function renderApiStatus() {
   const has = !!App.state.apiKey;
   el.textContent = has ? "✅ IA activada: chat inteligente y análisis de fotos disponibles." : "🔌 Modo local activo: comandos básicos sin conexión.";
   el.classList.toggle("ok", has);
-  $("chatChips").querySelectorAll(".chip").forEach((c) => c.classList.toggle("chip-ai", has));
 }
 
 function renderChat() {
@@ -289,7 +557,7 @@ function renderChat() {
   if (!App.state.chat.length) {
     App.state.chat.push({
       role: "bot",
-      text: "¡Hola! 👋 Soy JimmiteoBot, tu coach de nutrición.\n\nPuedo registrar lo que comes, calcular y cambiar tus metas, moverte de fecha y recomendarte libros y videos verificados de salud. Prueba los botones de abajo o escríbeme 👇",
+      text: "¡Hola! 👋 Soy JimmiteoBot, tu coach de nutrición.\n\nPuedo registrar lo que comes y tu peso, calcular y cambiar tus metas, moverte de fecha y recomendarte libros y videos verificados de salud. Prueba los botones de abajo o escríbeme 👇",
     });
   }
   for (const m of App.state.chat) {
@@ -397,6 +665,35 @@ function goalModal(field, label, unit) {
     });
 }
 
+function weightModal() {
+  const unit = App.state.units.weight;
+  const latest = App.latestWeight();
+  const prefill = latest ? App.kgToUnit(latest.kg).toFixed(1) : "";
+  openModal(`
+    <h3>⚖️ Registrar peso</h3>
+    <div class="form-grid">
+      <label style="grid-column:1/-1">Peso de ${App.formatDate(App.state.currentDate)} (${unit})
+        <input id="fwVal" type="number" min="1" step="0.1" value="${prefill}" placeholder="${unit === "kg" ? "78.5" : "173.0"}">
+      </label>
+    </div>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" id="fwCancel">Cancelar</button>
+      <button class="btn btn-primary" id="fwSave">Guardar</button>
+    </div>`,
+    (box) => {
+      const input = box.querySelector("#fwVal");
+      input.focus(); input.select();
+      box.querySelector("#fwCancel").onclick = closeModal;
+      box.querySelector("#fwSave").onclick = () => {
+        const v = +input.value;
+        if (!v || v <= 0) { toast("Ingresa un peso válido ⚠️"); return; }
+        const kg = App.logWeight(App.unitToKg(v));
+        toast(`Peso registrado: ${App.fmtWeight(kg)} ⚖️`);
+        closeModal();
+      };
+    });
+}
+
 /* ---------- Chat ---------- */
 let botBusy = false;
 
@@ -433,7 +730,6 @@ async function sendToBot(text) {
       hideTyping();
       pushChat("bot", answer);
     } else {
-      // pequeño delay para que se sienta natural
       await new Promise((r) => setTimeout(r, 500 + Math.random() * 500));
       const { text: answer, actions } = localBot(text.trim());
       hideTyping();
@@ -507,6 +803,17 @@ function bindEvents() {
   $("nextDay").addEventListener("click", () => App.setDate(App.shiftKey(App.state.currentDate, 1)));
   $("dateInput").addEventListener("change", (e) => e.target.value && App.setDate(e.target.value));
 
+  // héroe: cambiar estilo (auto → líquido → energía → número)
+  $("heroSwitch").addEventListener("click", () => {
+    const order = ["auto", ...HERO_MODES];
+    const i = order.indexOf(App.state.heroStyle);
+    App.state.heroStyle = order[(i + 1) % order.length];
+    App.save();
+    $("heroStage").dataset.mode = ""; // fuerza re-render con animación
+    renderHoy();
+    toast(`Estilo: ${HERO_NAMES[App.state.heroStyle]}${App.state.heroStyle === "auto" ? " (rota cada día)" : ""}`);
+  });
+
   // metas rápidas
   $("editKcalGoal").addEventListener("click", (e) => { e.stopPropagation(); goalModal("kcal", "calorías", "kcal"); });
   document.querySelectorAll(".macro").forEach((el) =>
@@ -515,6 +822,9 @@ function bindEvents() {
       goalModal(f, GOAL_LABEL[f], "g");
     })
   );
+
+  // peso
+  $("logWeightBtn").addEventListener("click", weightModal);
 
   // comidas
   $("addMealBtn").addEventListener("click", () => mealModal());
@@ -548,6 +858,22 @@ function bindEvents() {
     if (q) sendToBot(q);
   });
 
+  // unidades
+  $("segWeight").addEventListener("click", (e) => {
+    const u = e.target.closest("button")?.dataset.u;
+    if (!u) return;
+    App.state.units.weight = u;
+    App.save(); renderConfig(); renderHoy();
+    toast(`Peso en ${u} ⚖️`);
+  });
+  $("segHeight").addEventListener("click", (e) => {
+    const u = e.target.closest("button")?.dataset.u;
+    if (!u) return;
+    App.state.units.height = u;
+    App.save(); renderConfig();
+    toast(`Altura en ${u === "cm" ? "centímetros" : "pies y pulgadas"} 📏`);
+  });
+
   // ajustes: perfil y metas
   const bindField = (id, obj, key, cb) =>
     $(id).addEventListener("change", (e) => {
@@ -558,8 +884,6 @@ function bindEvents() {
     });
   bindField("pNombre", App.state.profile, "nombre");
   bindField("pObjetivo", App.state.profile, "objetivo", renderTdee);
-  bindField("pPeso", App.state.profile, "peso", renderTdee);
-  bindField("pAltura", App.state.profile, "altura", renderTdee);
   bindField("pEdad", App.state.profile, "edad", renderTdee);
   bindField("pSexo", App.state.profile, "sexo", renderTdee);
   bindField("pActividad", App.state.profile, "actividad", renderTdee);
@@ -568,18 +892,38 @@ function bindEvents() {
   bindField("gCarbsIn", App.state.goals, "carbs");
   bindField("gFatIn", App.state.goals, "fat");
 
+  // peso y altura respetan la unidad elegida (se guardan en kg / cm)
+  $("pPeso").addEventListener("change", (e) => {
+    const v = +e.target.value;
+    App.state.profile.peso = v ? Math.round(App.unitToKg(v) * 10) / 10 : "";
+    App.save(); renderTdee(); renderAll();
+  });
+  $("pAltura").addEventListener("change", (e) => {
+    App.state.profile.altura = +e.target.value || "";
+    App.save(); renderTdee(); renderAll();
+  });
+  const ftChange = () => {
+    const ft = +$("pAlturaFt").value || 0;
+    const inch = +$("pAlturaIn").value || 0;
+    App.state.profile.altura = ft || inch ? Math.round((ft * 12 + inch) * 2.54) : "";
+    App.save(); renderTdee(); renderAll();
+  };
+  $("pAlturaFt").addEventListener("change", ftChange);
+  $("pAlturaIn").addEventListener("change", ftChange);
+
+  $("apiKeyIn").addEventListener("change", (e) => {
+    App.state.apiKey = e.target.value.trim();
+    App.save();
+    renderApiStatus();
+    toast(App.state.apiKey ? "IA activada ✨" : "Modo local activo 🔌");
+  });
+
   // cálculo automático de macros según el perfil
   $("calcMacrosBtn").addEventListener("click", () => {
     const m = App.applyMacros();
     if (!m) { toast("Completa peso, altura y edad primero ⚠️"); return; }
     renderConfig();
     toast(`Metas actualizadas: ${m.kcal} kcal · P ${m.protein} · C ${m.carbs} · G ${m.fat} ⚡`);
-  });
-  $("apiKeyIn").addEventListener("change", (e) => {
-    App.state.apiKey = e.target.value.trim();
-    App.save();
-    renderApiStatus();
-    toast(App.state.apiKey ? "IA activada ✨" : "Modo local activo 🔌");
   });
 
   // datos
@@ -612,10 +956,10 @@ function bindEvents() {
   $("resetBtn").addEventListener("click", () => {
     openModal(`
       <h3>⚠️ Borrar todo</h3>
-      <p style="color:var(--ink-2);font-size:14px;line-height:1.6;margin-bottom:18px">Se eliminarán todas tus comidas, metas y el chat de este dispositivo. Esta acción no se puede deshacer.</p>
+      <p style="color:var(--ink-2);font-size:14px;line-height:1.6;margin-bottom:18px">Se eliminarán todas tus comidas, pesos, metas y el chat de este dispositivo. Esta acción no se puede deshacer.</p>
       <div class="modal-btns">
         <button class="btn btn-ghost" id="rCancel">Cancelar</button>
-        <button class="btn btn-primary" id="rOk" style="background:var(--rose);color:#fff">Borrar todo</button>
+        <button class="btn btn-primary" id="rOk" style="background:var(--rose)">Borrar todo</button>
       </div>`,
       (box) => {
         box.querySelector("#rCancel").onclick = closeModal;
@@ -634,19 +978,19 @@ function bindEvents() {
   document.addEventListener("keydown", (e) => e.key === "Escape" && closeModal());
 }
 
-/* ---------- partículas del fondo ---------- */
+/* ---------- burbujas del fondo ---------- */
 function initParticles() {
   const wrap = $("particles");
   if (!wrap || matchMedia("(prefers-reduced-motion: reduce)").matches) return;
-  for (let i = 0; i < 22; i++) {
+  for (let i = 0; i < 18; i++) {
     const p = document.createElement("div");
     p.className = "particle";
-    const size = 1.5 + Math.random() * 2.5;
+    const size = 3 + Math.random() * 5;
     p.style.width = p.style.height = size + "px";
     p.style.left = Math.random() * 100 + "%";
-    p.style.animationDuration = 9 + Math.random() * 14 + "s";
-    p.style.animationDelay = -Math.random() * 20 + "s";
-    if (Math.random() < 0.35) { p.style.background = "#818cf8"; p.style.boxShadow = "0 0 6px rgba(129,140,248,.8)"; }
+    p.style.animationDuration = 11 + Math.random() * 15 + "s";
+    p.style.animationDelay = -Math.random() * 22 + "s";
+    if (Math.random() < 0.4) p.style.background = "#CBE99B";
     wrap.appendChild(p);
   }
 }

@@ -53,6 +53,18 @@ const BOT_TOOLS = [
     input_schema: { type: "object", properties: {} },
   },
   {
+    name: "log_weight",
+    description: "Registra el peso corporal del usuario para la fecha activa. Si el usuario da el peso en libras, pásalo con unit 'lb'.",
+    input_schema: {
+      type: "object",
+      properties: {
+        weight: { type: "number", description: "Peso corporal" },
+        unit: { type: "string", enum: ["kg", "lb"], description: "Unidad del valor dado (por defecto kg)" },
+      },
+      required: ["weight"],
+    },
+  },
+  {
     name: "set_date",
     description: "Cambia la fecha activa de la app (para ver o registrar en otro día). Formato YYYY-MM-DD.",
     input_schema: {
@@ -95,6 +107,13 @@ function runBotAction(name, input) {
       if (!m) return "Faltan datos del perfil (peso, altura o edad). Pídele al usuario que los complete en Ajustes.";
       return `⚡ Macros calculados y aplicados: ${m.kcal} kcal · Proteína ${m.protein}g · Carbos ${m.carbs}g · Grasa ${m.fat}g (gasto estimado: ${m.tdee} kcal/día)`;
     }
+    case "log_weight": {
+      let kg = +input.weight || 0;
+      if (input.unit === "lb") kg = kg / 2.20462;
+      if (kg < 20 || kg > 400) return "Ese peso no parece válido.";
+      const saved = App.logWeight(kg);
+      return `⚖️ Peso registrado: ${App.fmtWeight(saved)}`;
+    }
     case "set_date": {
       if (!/^\d{4}-\d{2}-\d{2}$/.test(input.date || "")) return "Fecha no válida (usa YYYY-MM-DD).";
       App.setDate(input.date);
@@ -117,9 +136,11 @@ function stateSummary() {
     p.edad && `${p.edad} años`, `objetivo: ${OBJ[p.objetivo] || "mantener"}`,
   ].filter(Boolean).join(", ");
   const meals = App.currentDay().meals.map((m, i) => `${i}. ${m.name} (${m.kcal} kcal, P${m.protein} C${m.carbs} G${m.fat})`).join("\n") || "(sin comidas)";
+  const lastW = App.latestWeight();
   return [
     `Fecha activa: ${s.currentDate} (hoy es ${App.todayKey()})`,
     `Perfil del usuario: ${perfil}`,
+    `Último peso registrado: ${lastW ? `${lastW.kg} kg el ${lastW.key}` : "ninguno"} (unidad preferida: ${s.units.weight})`,
     `Metas diarias: ${g.kcal} kcal · proteína ${g.protein}g · carbos ${g.carbs}g · grasa ${g.fat}g`,
     `Consumido en la fecha activa: ${t.kcal} kcal · P ${t.protein}g · C ${t.carbs}g · G ${t.fat}g`,
     `Comidas de la fecha activa:\n${meals}`,
@@ -132,7 +153,7 @@ function systemPrompt() {
   const tips = KNOWLEDGE.tips.map((t) => `- ${t.text} (Fuente: ${t.source})`).join("\n");
   return `Eres JimmiteoBot, el coach de nutrición y salud dentro de la app JimmiteoBot. Hablas español, eres cercano, motivador y breve (2-5 frases, usa emojis con moderación).
 
-Puedes EDITAR la app con tus herramientas: registrar/eliminar comidas, cambiar metas, calcular macros automáticamente desde el perfil y cambiar la fecha activa. Úsalas siempre que el usuario lo pida, sin pedir confirmación para acciones simples. Si pregunta cuántas calorías o macros debería comer, usa calculate_macros.
+Puedes EDITAR la app con tus herramientas: registrar/eliminar comidas, registrar el peso corporal, cambiar metas, calcular macros automáticamente desde el perfil y cambiar la fecha activa. Úsalas siempre que el usuario lo pida, sin pedir confirmación para acciones simples. Si pregunta cuántas calorías o macros debería comer, usa calculate_macros.
 
 REGLAS DE VERACIDAD (muy importante):
 - Solo recomienda libros y videos de esta lista verificada. Nunca inventes títulos, autores, estudios ni cifras.
@@ -241,6 +262,19 @@ const GOAL_WORDS = [
 function localBot(text) {
   const t = text.toLowerCase().trim();
   const reply = (text, actions = []) => ({ text, actions });
+
+  // Registrar peso: "peso 78.5", "hoy pesé 172 libras"
+  const wMatch = t.match(/(?:^|\s)(?:peso|pesé|pese|me pesé|me pese|marqué|marque)\s+(?:es\s+|de\s+)?(\d+(?:[.,]\d+)?)\s*(lb|libras?|kg|kilos?)?/);
+  if (wMatch) {
+    let v = parseFloat(wMatch[1].replace(",", "."));
+    const saidLb = /lb|libra/.test(wMatch[2] || "");
+    const saidKg = /kg|kilo/.test(wMatch[2] || "");
+    let kg = saidLb ? v / 2.20462 : saidKg ? v : App.unitToKg(v); // sin unidad → usa la preferida
+    if (kg >= 20 && kg <= 400) {
+      const saved = App.logWeight(kg);
+      return reply("¡Anotado en tu gráfica de peso! 📈", [`⚖️ Peso registrado: ${App.fmtWeight(saved)}`]);
+    }
+  }
 
   // Calcular macros: "calcula mis macros", "¿cuántas calorías debería comer?"
   if (/(calcula|calcúlame|calculame).*(macro|calor|meta)|cu[aá]nt[ao]s?\s+(calor|prote).*(deber|debo|tengo que)/.test(t)) {
