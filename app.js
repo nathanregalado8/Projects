@@ -375,14 +375,15 @@ function renderHoy() {
   list.innerHTML = "";
   $("mealEmpty").hidden = day.meals.length > 0;
   day.meals.forEach((m) => {
-    // la barra muestra el peso relativo del macro dentro de esta comida
-    const top = Math.max(m.protein, m.carbs, m.fat, 1);
+    // la barra mide cuánto aporta esta comida a tu meta diaria del macro
     const mr = (k) => {
       const meta = MACRO_META[k], val = m[k];
+      const pct = Math.min(100, (val / g[k]) * 100);
       return `<div class="mrow" style="--c:${meta.color};--cbg:${meta.soft}">
         <span class="mrow-chip">${meta.letter}</span>
         <span class="mrow-g">${val} g</span>
-        <span class="mrow-track"><span class="mrow-fill" style="width:${Math.max(val ? 6 : 0, (val / top) * 100).toFixed(1)}%"></span></span>
+        <span class="mrow-track"><span class="mrow-fill" style="width:${pct.toFixed(1)}%"></span></span>
+        <span class="mrow-pct">${Math.round(pct)}%</span>
       </div>`;
     };
     const li = document.createElement("div");
