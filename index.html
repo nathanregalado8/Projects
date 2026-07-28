@@ -7,7 +7,7 @@
   <title>JimmiteoBot · Tu coach de nutrición con IA</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@500;600;700&family=Inter:wght@400;500;600&display=swap" rel="stylesheet">
+  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
   <link rel="stylesheet" href="styles.css">
   <link rel="manifest" href="manifest.json">
   <meta name="mobile-web-app-capable" content="yes">
@@ -18,314 +18,280 @@
   <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='3' y='6' width='18' height='14' rx='5' fill='%23FF5A3C'/><circle cx='9' cy='13' r='2' fill='%23FFF9F2'/><circle cx='15' cy='13' r='2' fill='%23FFF9F2'/><rect x='11' y='2' width='2' height='4' rx='1' fill='%23FF8A00'/></svg>">
 </head>
 <body>
-  <!-- Fondo animado: blobs cítricos + burbujas -->
+  <!-- fondo: blobs cítricos + burbujitas -->
   <div class="bg" aria-hidden="true">
     <div class="blob blob-1"></div>
     <div class="blob blob-2"></div>
-    <div class="blob blob-3"></div>
-    <div class="particles" id="particles"></div>
+    <div class="bubbles" id="bubbles"></div>
   </div>
 
   <div class="app">
-    <!-- Header -->
-    <header class="header">
-      <div class="brand">
-        <div class="brand-logo">
-          <svg viewBox="0 0 24 24" width="24" height="24" fill="none">
-            <rect x="3" y="7" width="18" height="13" rx="5" stroke="#fff" stroke-width="2"/>
-            <circle cx="9" cy="13.5" r="1.6" fill="#fff"/>
-            <circle cx="15" cy="13.5" r="1.6" fill="#fff"/>
-            <path d="M12 7V3.5" stroke="#fff" stroke-width="2" stroke-linecap="round"/>
-            <circle cx="12" cy="3" r="1.4" fill="#fff"/>
+    <!-- ============ HOY ============ -->
+    <main class="view view-active" id="view-hoy">
+      <header class="hd">
+        <div class="hd-logo">
+          <svg width="24" height="24" viewBox="0 0 36 36" fill="none">
+            <line x1="18" y1="4" x2="18" y2="9" stroke="white" stroke-width="2.6" stroke-linecap="round"/>
+            <circle cx="18" cy="3.5" r="2.4" fill="white"/>
+            <rect x="7" y="9" width="22" height="18" rx="7" stroke="white" stroke-width="2.6"/>
+            <circle cx="13.5" cy="18" r="2.5" fill="white"/><circle cx="22.5" cy="18" r="2.5" fill="white"/>
+            <path d="M14 23.5c1.2 1 2.6 1.5 4 1.5s2.8-.5 4-1.5" stroke="white" stroke-width="2.2" stroke-linecap="round"/>
           </svg>
         </div>
-        <div class="brand-text">
-          <h1>JIMMITEO<span>BOT</span></h1>
-          <p class="brand-tag">NUTRICIÓN · IA</p>
+        <div class="hd-nav">
+          <button class="navbtn" id="prevDay" aria-label="Día anterior">
+            <svg width="8" height="12" viewBox="0 0 8 14"><path d="M7 1L1 7l6 6" stroke="#FF5A3C" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
+          <button class="datepill" id="datePill">
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="2.5" width="12" height="10.5" rx="2.5" stroke="#FF5A3C" stroke-width="1.6"/><path d="M1 6h12" stroke="#FF5A3C" stroke-width="1.6"/><path d="M4.5 1v2.5M9.5 1v2.5" stroke="#FF5A3C" stroke-width="1.6" stroke-linecap="round"/></svg>
+            <span id="dateLabel">hoy</span>
+            <svg width="9" height="6" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="#C4A183" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <input type="date" id="dateInput" aria-label="Cambiar fecha">
+          </button>
+          <button class="navbtn" id="nextDay" aria-label="Día siguiente">
+            <svg width="8" height="12" viewBox="0 0 8 14"><path d="M1 1l6 6-6 6" stroke="#FFB48A" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+          </button>
         </div>
-      </div>
-      <button class="date-pill" id="datePill" title="Toca para cambiar la fecha">
-        <span id="dateLabel">—</span>
-        <input type="date" id="dateInput" aria-label="Cambiar fecha">
-      </button>
-    </header>
+        <div class="streak" id="streakChip" hidden>🔥 <b id="streakDays">0</b> días</div>
+      </header>
 
-    <!-- ============ VISTA: HOY ============ -->
-    <main class="view view-active" id="view-hoy">
-      <div class="date-nav">
-        <button class="icon-btn" id="prevDay" aria-label="Día anterior">‹</button>
-        <div class="date-nav-center">
-          <h2 id="dayTitle">Hoy</h2>
-          <span class="streak" id="streakChip" hidden>🔥 <b id="streakDays">0</b> días</span>
+      <!-- medidor de calorías -->
+      <section class="card card-hero">
+        <div class="hero-head">
+          <span class="hero-eyebrow">CALORÍAS DE HOY</span>
+          <span class="hero-rule"></span>
+          <button class="hero-switch" id="heroSwitch">
+            <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M1.5 6a4.5 4.5 0 0 1 7.7-3.2M10.5 6a4.5 4.5 0 0 1-7.7 3.2" stroke="#FF5A3C" stroke-width="1.6" stroke-linecap="round"/><path d="M9 1v2.2H6.8M3 11V8.8h2.2" stroke="#FF5A3C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <span id="heroModeLabel">Cápsula</span>
+          </button>
         </div>
-        <button class="icon-btn" id="nextDay" aria-label="Día siguiente">›</button>
-      </div>
+        <div class="hero-canvas" id="heroStage"></div>
+        <div class="dataline">
+          <span>meta <b id="dlMeta">2100 kcal</b> · te quedan <b class="dl-rest" id="dlRest">0</b></span>
+          <span class="dataline-pct" id="dlPct">0%</span>
+        </div>
+        <div class="macros" id="macrosRow"></div>
+      </section>
 
-      <!-- Héroe de calorías (estilo intercambiable) -->
-      <section class="card hero-card" id="heroCard">
-        <button class="hero-switch" id="heroSwitch" title="Cambiar estilo de visualización">
-          <svg viewBox="0 0 24 24" width="13" height="13" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M4 7h13M13 3l4 4-4 4M20 17H7M11 13l-4 4 4 4"/></svg>
-          <span id="heroModeLabel">auto</span>
+      <!-- peso corporal -->
+      <section class="card wcard">
+        <div class="w-top">
+          <div class="w-main">
+            <div class="w-label">PESO CORPORAL</div>
+            <div class="w-val"><b id="weightNow">—</b><span id="weightUnit">kg</span></div>
+            <div class="w-trend"><span class="w-delta" id="weightDelta">sin registros</span><span class="w-since" id="weightSince"></span></div>
+          </div>
+          <svg class="w-spark" id="weightSpark" width="112" height="52" viewBox="0 0 112 52" aria-hidden="true"></svg>
+        </div>
+        <button class="w-btn" id="logWeightBtn">
+          <svg width="13" height="13" viewBox="0 0 14 14"><path d="M7 1.5v11M1.5 7h11" stroke="#16A34A" stroke-width="2.2" stroke-linecap="round"/></svg>
+          Registrar peso de hoy
         </button>
-        <div class="hero-stage" id="heroStage"></div>
-        <div class="hero-meta">
-          <span>meta <button class="inline-edit" id="editKcalGoal">2200</button> kcal</span>
-          <span class="hero-rest" id="heroRest"></span>
-        </div>
-
-        <!-- Macros -->
-        <div class="macros">
-          <button class="macro" data-macro="protein" title="Toca para editar tu meta">
-            <div class="macro-head"><span class="macro-dot" style="--c:#7c3aed"></span>Proteína</div>
-            <div class="macro-val"><b id="mProtein">0</b>/<span id="gProtein">140</span> g</div>
-            <div class="macro-bar"><div class="macro-fill" id="bProtein" style="--c:#7c3aed"></div></div>
-          </button>
-          <button class="macro" data-macro="carbs" title="Toca para editar tu meta">
-            <div class="macro-head"><span class="macro-dot" style="--c:#d97706"></span>Carbos</div>
-            <div class="macro-val"><b id="mCarbs">0</b>/<span id="gCarbs">220</span> g</div>
-            <div class="macro-bar"><div class="macro-fill" id="bCarbs" style="--c:#d97706"></div></div>
-          </button>
-          <button class="macro" data-macro="fat" title="Toca para editar tu meta">
-            <div class="macro-head"><span class="macro-dot" style="--c:#e11d48"></span>Grasa</div>
-            <div class="macro-val"><b id="mFat">0</b>/<span id="gFat">70</span> g</div>
-            <div class="macro-bar"><div class="macro-fill" id="bFat" style="--c:#e11d48"></div></div>
-          </button>
-        </div>
       </section>
 
-      <!-- Peso -->
-      <section class="card weight-card">
-        <div class="weight-main">
-          <div class="weight-label">Peso</div>
-          <div class="weight-now"><b id="weightNow">—</b><small id="weightUnit"> kg</small></div>
-          <div class="weight-trend" id="weightTrend"></div>
-        </div>
-        <svg class="spark" id="weightSpark" viewBox="0 0 120 44" preserveAspectRatio="none" aria-hidden="true"></svg>
-        <button class="btn-small" id="logWeightBtn">+ Registrar</button>
-      </section>
-
-      <!-- Foto de tu comida -->
-      <section class="card photo-card" id="photoCard">
+      <!-- foto IA -->
+      <section class="photo">
+        <svg class="spk spk-1" width="16" height="16" viewBox="0 0 16 16"><path d="M8 0l1.8 6.2L16 8l-6.2 1.8L8 16l-1.8-6.2L0 8l6.2-1.8Z" fill="#FF8A00"/></svg>
+        <svg class="spk spk-2" width="10" height="10" viewBox="0 0 16 16"><path d="M8 0l1.8 6.2L16 8l-6.2 1.8L8 16l-1.8-6.2L0 8l6.2-1.8Z" fill="#84CC16"/></svg>
         <input type="file" id="photoInputCam" accept="image/*" capture="environment" hidden>
         <input type="file" id="photoInputGal" accept="image/*" hidden>
-        <div class="photo-inner" id="photoInner">
+        <div class="photo-row" id="photoInner">
           <div class="photo-icon">
-            <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#FF5A3C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
-              <path d="M3 8a2 2 0 0 1 2-2h1.5l1.2-2h8.6l1.2 2H19a2 2 0 0 1 2 2v10a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2Z"/>
-              <circle cx="12" cy="13" r="3.6"/>
-            </svg>
+            <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="2" y="7" width="24" height="18" rx="5" stroke="#FF5A3C" stroke-width="2.2"/><path d="M9 7l2-4h6l2 4" stroke="#FF5A3C" stroke-width="2.2" stroke-linejoin="round"/><circle cx="14" cy="16" r="5" stroke="#FF8A00" stroke-width="2.2"/></svg>
           </div>
-          <div style="flex:1">
+          <div class="photo-txt">
             <div class="photo-title">Foto de tu comida</div>
-            <div class="photo-sub">La IA calcula calorías y macros por ti</div>
-          </div>
-          <div class="photo-btns">
-            <button class="photo-cta" id="btnCam">📷 TOMAR</button>
-            <button class="photo-cta alt" id="btnGal">🖼️ SUBIR</button>
+            <div class="photo-sub">la IA calcula calorías y macros</div>
           </div>
         </div>
+        <div class="photo-btns" id="photoBtns">
+          <button class="pbtn" id="btnCam">
+            <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><rect x="1.5" y="5" width="17" height="13" rx="4" stroke="#fff" stroke-width="1.9"/><path d="M6.5 5l1.4-2.8h4.2L13.5 5" stroke="#fff" stroke-width="1.9" stroke-linejoin="round"/><circle cx="10" cy="11.5" r="3.6" stroke="#fff" stroke-width="1.9"/></svg>
+            TOMAR
+          </button>
+          <button class="pbtn pbtn-alt" id="btnGal">
+            <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><rect x="1.8" y="3.5" width="16.4" height="13" rx="3.5" stroke="#E2540F" stroke-width="1.9"/><path d="M2.5 13.5l4.2-4 3.3 3 2.8-2.4 4.7 4.3" stroke="#E2540F" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="7.6" r="1.5" fill="#E2540F"/></svg>
+            SUBIR
+          </button>
+        </div>
         <div class="photo-loading" id="photoLoading" hidden>
-          <div class="spinner"></div>
-          <span>Analizando tu comida…</span>
+          <div class="spinner"></div><span>Analizando tu comida…</span>
         </div>
       </section>
 
-      <!-- Comidas del día -->
-      <section class="section-meals">
-        <div class="section-head">
-          <h3>Comidas del día</h3>
-          <button class="btn-small" id="addMealBtn">+ Agregar</button>
+      <!-- comidas -->
+      <section class="meals">
+        <div class="meals-head">
+          <h3>Comidas de hoy</h3>
+          <button class="add-btn" id="addMealBtn">+ Agregar</button>
         </div>
-        <ul class="meal-list" id="mealList"></ul>
-        <div class="empty" id="mealEmpty">Aún no registras comidas en este día.<br>Usa la foto, el botón <b>+ Agregar</b> o pídeselo al bot.</div>
+        <div id="mealList"></div>
+        <div class="empty" id="mealEmpty">Aún no registras comidas.<br>Usa la foto, <b>+ Agregar</b> o pídeselo al bot.</div>
       </section>
     </main>
 
-    <!-- ============ VISTA: LOG ============ -->
+    <!-- ============ LOG ============ -->
     <main class="view" id="view-log">
-      <h2 class="view-title">Historial</h2>
+      <h2 class="page-title">Tu progreso</h2>
 
       <section class="card">
-        <div class="chart-head">
-          <h3>Peso · últimas semanas</h3>
-          <span class="chart-tag" id="weightRange"></span>
+        <div class="chart-top">
+          <div class="chart-name">Peso · 6 semanas</div>
+          <div class="chart-delta" id="weightRange"></div>
         </div>
-        <div class="weight-chart-wrap">
-          <svg class="weight-chart" id="weightChart" viewBox="0 0 340 150" role="img" aria-label="Gráfica de peso de las últimas semanas"></svg>
-          <div class="empty" id="weightEmpty">Registra tu peso en la pestaña Hoy para ver tu progreso aquí.</div>
-        </div>
+        <svg class="wchart" id="weightChart" viewBox="0 0 330 150" preserveAspectRatio="none" role="img" aria-label="Gráfica de peso"></svg>
+        <div class="wchart-labels" id="weightLabels"></div>
+        <div class="empty" id="weightEmpty">Registra tu peso en Hoy para ver tu progreso.</div>
       </section>
 
       <section class="card">
-        <div class="chart-head">
-          <h3 id="weekTitle">Calorías · últimos 7 días</h3>
-          <span class="chart-goal-tag"><i></i> meta</span>
+        <div class="chart-top">
+          <div class="chart-name" id="weekTitle">Calorías · 7 días</div>
+          <div class="chart-avg">prom. <b id="weekAvg">0</b></div>
         </div>
-        <div class="seg seg-mini" id="segChart">
-          <button data-m="kcal" class="seg-on">Kcal</button><button data-m="protein">Proteína</button><button data-m="carbs">Carbos</button><button data-m="fat">Grasa</button>
+        <div class="pills" id="segChart">
+          <button data-m="kcal" class="pill on">Kcal</button><button data-m="protein" class="pill">Prot</button><button data-m="carbs" class="pill">Carbos</button><button data-m="fat" class="pill">Grasa</button>
         </div>
-        <div class="week-chart" id="weekChart" role="img" aria-label="Gráfica de los últimos 7 días"></div>
+        <div class="weekchart" id="weekChart"></div>
       </section>
 
-      <section class="card">
-        <h3 class="log-title">Días registrados</h3>
-        <ul class="log-list" id="logList"></ul>
+      <section class="meals">
+        <div class="meals-head"><h3>Días registrados</h3></div>
+        <div id="logList"></div>
         <div class="empty" id="logEmpty">Todavía no hay días con registros.</div>
       </section>
     </main>
 
-    <!-- ============ VISTA: BOT ============ -->
+    <!-- ============ BOT ============ -->
     <main class="view view-bot" id="view-bot">
-      <div class="chat-header">
-        <div class="chat-avatar">
-          <svg viewBox="0 0 24 24" width="20" height="20" fill="none">
-            <rect x="3" y="7" width="18" height="13" rx="5" stroke="#fff" stroke-width="2"/>
-            <circle cx="9" cy="13.5" r="1.6" fill="#fff"/><circle cx="15" cy="13.5" r="1.6" fill="#fff"/>
-            <path d="M12 7V3.5" stroke="#fff" stroke-width="2" stroke-linecap="round"/><circle cx="12" cy="3" r="1.4" fill="#fff"/>
+      <div class="bot-head">
+        <div class="bot-avatar">
+          <svg width="22" height="22" viewBox="0 0 36 36" fill="none">
+            <line x1="18" y1="4" x2="18" y2="9" stroke="white" stroke-width="2.6" stroke-linecap="round"/>
+            <circle cx="18" cy="3.5" r="2.4" fill="white"/>
+            <rect x="7" y="9" width="22" height="18" rx="7" stroke="white" stroke-width="2.6"/>
+            <circle cx="13.5" cy="18" r="2.5" fill="white"/><circle cx="22.5" cy="18" r="2.5" fill="white"/>
           </svg>
+          <i class="dot"></i>
         </div>
         <div>
-          <div class="chat-name">JimmiteoBot</div>
-          <div class="chat-status"><i></i><span id="chatStatus">en línea · listo para ayudarte</span></div>
+          <div class="bot-name">Jimmiteobot</div>
+          <div class="bot-status">en línea · listo para ayudarte</div>
         </div>
       </div>
-      <div class="chat-scroll" id="chatScroll">
-        <div class="chat" id="chatList"></div>
-      </div>
+      <div class="chat-scroll" id="chatScroll"><div class="chat" id="chatList"></div></div>
       <div class="chips" id="chatChips">
         <button class="chip" data-q="¿Cómo voy hoy?">¿Cómo voy hoy?</button>
         <button class="chip" data-q="Calcula mis macros">Calcula mis macros</button>
-        <button class="chip" data-q="Peso 78.5">Registrar peso</button>
+        <button class="chip" data-q="Peso 78.4">Registrar peso</button>
         <button class="chip" data-q="Recomiéndame un libro">Un libro</button>
         <button class="chip" data-q="Dame un consejo de salud">Consejo</button>
       </div>
       <form class="chat-input" id="chatForm">
-        <input type="text" id="chatText" placeholder="Escríbele a JimmiteoBot…" autocomplete="off">
-        <button type="submit" class="send-btn" aria-label="Enviar">
-          <svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
-            <path d="M4 12h14M13 5l7 7-7 7"/>
-          </svg>
+        <input type="text" id="chatText" placeholder="Escríbele a tu coach…" autocomplete="off">
+        <button type="submit" class="send" aria-label="Enviar">
+          <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><path d="M2.5 10L17 3.5 13.5 17l-3.8-4.6L2.5 10Z" stroke="#fff" stroke-width="1.8" stroke-linejoin="round"/></svg>
         </button>
       </form>
     </main>
 
-    <!-- ============ VISTA: AJUSTES ============ -->
+    <!-- ============ AJUSTES ============ -->
     <main class="view" id="view-config">
-      <h2 class="view-title">Ajustes</h2>
+      <h2 class="page-title">Ajustes</h2>
 
-      <section class="card form-card">
-        <h3><span class="h-accent"></span>Unidades</h3>
-        <div class="units-row">
-          <div class="seg" id="segWeight">
-            <button data-u="kg" class="seg-on">kg</button><button data-u="lb">lb</button>
+      <section class="card">
+        <div class="seg-row">
+          <div class="seg-col">
+            <div class="seg-k">PESO</div>
+            <div class="seg" id="segWeight"><button data-u="kg" class="seg-btn on">kg</button><button data-u="lb" class="seg-btn">lb</button></div>
           </div>
-          <div class="seg" id="segHeight">
-            <button data-u="cm" class="seg-on">cm</button><button data-u="ft">ft/in</button>
+          <div class="seg-col">
+            <div class="seg-k">ALTURA</div>
+            <div class="seg" id="segHeight"><button data-u="cm" class="seg-btn on">cm</button><button data-u="ft" class="seg-btn">ft/in</button></div>
           </div>
         </div>
       </section>
 
-      <section class="card form-card">
-        <h3><span class="h-accent"></span>Tu perfil</h3>
-        <div class="form-grid">
-          <label>Nombre<input type="text" id="pNombre" placeholder="Tu nombre"></label>
-          <label>Objetivo
-            <select id="pObjetivo">
-              <option value="cut">Perder grasa</option>
-              <option value="maintain">Mantener</option>
-              <option value="bulk">Ganar músculo</option>
+      <section class="card">
+        <div class="card-title">Tu perfil</div>
+        <label class="prof-row"><span>Nombre</span><input type="text" id="pNombre" placeholder="Tu nombre"></label>
+        <div class="prof-obj">
+          <div class="prof-k">Objetivo</div>
+          <div class="seg" id="segObjetivo"><button data-o="cut" class="seg-btn on">Perder</button><button data-o="maintain" class="seg-btn">Mantener</button><button data-o="bulk" class="seg-btn">Ganar</button></div>
+        </div>
+        <div class="prof-grid">
+          <label class="pbox"><span class="pbox-k">PESO (<i class="wUnitLbl">kg</i>)</span><input class="pbox-v" type="number" id="pPeso" min="20" max="700" step="0.1" placeholder="—"></label>
+          <label class="pbox" id="alturaCmWrap"><span class="pbox-k">ALTURA (CM)</span><input class="pbox-v" type="number" id="pAltura" min="100" max="230" placeholder="—"></label>
+          <label class="pbox" id="alturaFtWrap" hidden><span class="pbox-k">ALTURA (FT/IN)</span>
+            <span class="pbox-dual"><input class="pbox-v" type="number" id="pAlturaFt" min="3" max="7" placeholder="5"><input class="pbox-v" type="number" id="pAlturaIn" min="0" max="11" placeholder="9"></span>
+          </label>
+          <label class="pbox"><span class="pbox-k">EDAD</span><input class="pbox-v" type="number" id="pEdad" min="10" max="110" placeholder="—"></label>
+          <label class="pbox"><span class="pbox-k">SEXO</span>
+            <select class="pbox-v" id="pSexo"><option value="m">Hombre</option><option value="f">Mujer</option></select>
+          </label>
+          <label class="pbox"><span class="pbox-k">ACTIVIDAD</span>
+            <select class="pbox-v" id="pActividad">
+              <option value="1.2">Sedentario</option><option value="1.375">Ligera</option><option value="1.55">Moderada</option><option value="1.725">Alta</option>
             </select>
           </label>
-          <label><span>Peso (<span class="wUnitLbl">kg</span>)</span><input type="number" id="pPeso" min="20" max="700" step="0.1"></label>
-          <label id="alturaCmWrap">Altura (cm)<input type="number" id="pAltura" min="100" max="230"></label>
-          <label id="alturaFtWrap" hidden>Altura (ft / in)
-            <span class="dual">
-              <input type="number" id="pAlturaFt" min="3" max="7" placeholder="5">
-              <input type="number" id="pAlturaIn" min="0" max="11" placeholder="9">
-            </span>
-          </label>
-          <label>Edad<input type="number" id="pEdad" min="10" max="110"></label>
-          <label>Sexo
-            <select id="pSexo">
-              <option value="m">Masculino</option>
-              <option value="f">Femenino</option>
-            </select>
-          </label>
-          <label style="grid-column:1/-1">Actividad
-            <select id="pActividad">
-              <option value="1.2">Sedentario (poco o nada de ejercicio)</option>
-              <option value="1.375">Ligera (1–3 días/semana)</option>
-              <option value="1.55">Moderada (3–5 días/semana)</option>
-              <option value="1.725">Alta (6–7 días/semana)</option>
+          <label class="pbox"><span class="pbox-k">RITMO</span>
+            <select class="pbox-v" id="pRitmo">
+              <option value="0.25">0.25 kg/sem</option><option value="0.5">0.5 kg/sem</option><option value="0.75">0.75 kg/sem</option><option value="1">1 kg/sem</option>
             </select>
           </label>
         </div>
-        <button class="btn btn-primary btn-wide" id="calcMacrosBtn">⚡ Calcular mis macros</button>
-        <div class="tdee-hint" id="tdeeHint"></div>
+        <button class="calc-btn" id="calcMacrosBtn">⚡ Calcular mis macros</button>
+        <div class="sug" id="tdeeHint"></div>
       </section>
 
-      <section class="card form-card">
-        <h3><span class="h-accent"></span>Metas diarias</h3>
-        <p class="form-note">Puedes ajustarlas a mano, pedírselas al bot en el chat o usar «Calcular mis macros» arriba.</p>
-        <div class="form-grid">
-          <label>Calorías (kcal)<input type="number" id="gKcalIn" min="800" max="6000"></label>
-          <label>Proteína (g)<input type="number" id="gProteinIn" min="20" max="400"></label>
-          <label>Carbos (g)<input type="number" id="gCarbsIn" min="20" max="800"></label>
-          <label>Grasa (g)<input type="number" id="gFatIn" min="10" max="250"></label>
+      <section class="card">
+        <div class="card-title">Metas diarias</div>
+        <div id="goalRows"></div>
+      </section>
+
+      <section class="card">
+        <div class="card-title">API y datos</div>
+        <div class="api-row" id="apiRow">
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="5.5" cy="10.5" r="3.5" stroke="#B06A3A" stroke-width="1.8"/><path d="M8 8l6-6M11 5l2 2M9 7l1.6 1.6" stroke="#B06A3A" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <span class="api-key" id="apiKeyMask">sin configurar</span>
+          <span class="api-edit">Editar</span>
         </div>
-      </section>
-
-      <section class="card form-card">
-        <h3><span class="h-accent"></span>Cerebro del bot (Claude API)</h3>
-        <p class="form-note">Pega tu API key de Anthropic para activar el análisis de fotos y el chat inteligente. Sin key, el bot funciona en modo local con comandos básicos. La key se guarda solo en este dispositivo.</p>
-        <label>API key<input type="password" id="apiKeyIn" placeholder="sk-ant-…"></label>
-        <div class="api-status" id="apiStatus"></div>
-      </section>
-
-      <section class="card form-card">
-        <h3><span class="h-accent"></span>Tus datos</h3>
-        <div class="row-btns">
-          <button class="btn-small" id="exportBtn">Exportar</button>
-          <button class="btn-small" id="importBtn">Importar</button>
-          <button class="btn-small danger" id="resetBtn">Borrar todo</button>
+        <div class="api-note" id="apiStatus"></div>
+        <div class="btn2">
+          <button class="obtn" id="exportBtn">⬇ Exportar</button>
+          <button class="obtn" id="importBtn">⬆ Importar</button>
           <input type="file" id="importInput" accept="application/json" hidden>
         </div>
+        <button class="dbtn" id="resetBtn">Borrar todos los datos</button>
       </section>
-
-      <p class="credits">JIMMITEOBOT 2.0 · ciencia verificada</p>
     </main>
 
-    <!-- Nav inferior -->
+    <!-- nav inferior -->
     <nav class="tabbar">
       <button class="tab tab-active" data-view="hoy">
-        <svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
-          <circle cx="12" cy="12" r="8.5"/><circle cx="12" cy="12" r="3" fill="currentColor" stroke="none"/>
-        </svg>Hoy
+        <svg class="tab-ico" width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="2.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
+        <span>Hoy</span><i class="tab-ind"></i>
       </button>
       <button class="tab" data-view="log">
-        <svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
-          <path d="M5 20V13M12 20V6M19 20v-4"/>
-        </svg>Log
+        <svg class="tab-ico" width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="4" y="12" width="3.5" height="8" rx="1.5" stroke="currentColor" stroke-width="2"/><rect x="10.2" y="7" width="3.5" height="13" rx="1.5" stroke="currentColor" stroke-width="2"/><rect x="16.5" y="3" width="3.5" height="17" rx="1.5" stroke="currentColor" stroke-width="2"/></svg>
+        <span>Log</span><i class="tab-ind"></i>
       </button>
       <button class="tab" data-view="bot">
-        <svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round">
-          <rect x="4" y="8" width="16" height="12" rx="4"/><circle cx="9.5" cy="13.5" r="0.8" fill="currentColor"/><circle cx="14.5" cy="13.5" r="0.8" fill="currentColor"/><path d="M12 8V4.5"/><circle cx="12" cy="4" r="1"/>
-        </svg>Bot<span class="tab-glow"></span>
+        <svg class="tab-ico" width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="4" y="7" width="16" height="12" rx="5" stroke="currentColor" stroke-width="2"/><line x1="12" y1="3.5" x2="12" y2="7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="9.5" cy="13" r="1.4" fill="currentColor"/><circle cx="14.5" cy="13" r="1.4" fill="currentColor"/></svg>
+        <span>Bot</span><i class="tab-ind"></i><i class="tab-glow"></i>
       </button>
       <button class="tab" data-view="config">
-        <svg class="tab-ico" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round">
-          <path d="M4 8h10M18 8h2M4 16h2M10 16h10"/><circle cx="16" cy="8" r="2.2"/><circle cx="8" cy="16" r="2.2"/>
-        </svg>Ajustes
+        <svg class="tab-ico" width="24" height="24" viewBox="0 0 24 24" fill="none"><line x1="4" y1="7" x2="20" y2="7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="15" cy="7" r="2.4" fill="#FFF9F2" stroke="currentColor" stroke-width="2"/><line x1="4" y1="16" x2="20" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="9" cy="16" r="2.4" fill="#FFF9F2" stroke="currentColor" stroke-width="2"/></svg>
+        <span>Ajustes</span><i class="tab-ind"></i>
       </button>
     </nav>
   </div>
 
-  <!-- Modal genérico -->
-  <div class="modal-backdrop" id="modalBackdrop" hidden>
-    <div class="modal" id="modalBox" role="dialog" aria-modal="true"></div>
+  <!-- hoja inferior (modales) -->
+  <div class="sheet-backdrop" id="sheetBackdrop" hidden>
+    <div class="sheet" id="sheetBox" role="dialog" aria-modal="true"></div>
   </div>
 
-  <!-- Toast -->
   <div class="toast" id="toast" hidden></div>
 
   <script src="knowledge.js"></script>
