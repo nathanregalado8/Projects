@@ -158,10 +158,13 @@
 
       <section class="card">
         <div class="chart-head">
-          <h3>Calorías · últimos 7 días</h3>
+          <h3 id="weekTitle">Calorías · últimos 7 días</h3>
           <span class="chart-goal-tag"><i></i> meta</span>
         </div>
-        <div class="week-chart" id="weekChart" role="img" aria-label="Gráfica de calorías de los últimos 7 días"></div>
+        <div class="seg seg-mini" id="segChart">
+          <button data-m="kcal" class="seg-on">Kcal</button><button data-m="protein">Proteína</button><button data-m="carbs">Carbos</button><button data-m="fat">Grasa</button>
+        </div>
+        <div class="week-chart" id="weekChart" role="img" aria-label="Gráfica de los últimos 7 días"></div>
       </section>
 
       <section class="card">

@@ -305,7 +305,9 @@ input, select { font: inherit; }
 .macro-fill { height: 100%; width: 0%; border-radius: 4px; background: var(--c); transition: width 0.9s var(--ease); }
 
 /* ---------- peso ---------- */
-.weight-card { display: flex; align-items: center; gap: 16px; }
+.weight-card { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
+.weight-main { min-width: 0; }
+.weight-card .btn-small { margin-left: auto; white-space: nowrap; }
 .weight-label { font-size: 10.5px; font-weight: 600; letter-spacing: 1px; text-transform: uppercase; color: var(--ink-2); }
 .weight-now b { font-size: 26px; font-weight: 700; }
 .weight-now small { font-size: 12px; color: var(--ink-2); font-weight: 600; }
@@ -313,7 +315,7 @@ input, select { font: inherit; }
 .weight-trend.down { color: var(--green-ink); }
 .weight-trend.up { color: #B45309; }
 .weight-trend.flat { color: var(--ink-2); }
-.spark { flex: 1; height: 44px; min-width: 60px; overflow: visible; }
+.spark { flex: 1 1 110px; height: 44px; min-width: 0; overflow: visible; }
 .spark path { fill: none; stroke: var(--green); stroke-width: 2.5; stroke-linecap: round; }
 .spark .spark-area { fill: url(#sparkGrad); stroke: none; opacity: 0.35; }
 .spark circle { fill: var(--green); }
@@ -411,12 +413,15 @@ input, select { font: inherit; }
 .wbar { flex: 1; display: flex; flex-direction: column; align-items: center; gap: 6px; height: 100%; justify-content: flex-end; position: relative; }
 .wbar-fill {
   width: 100%; max-width: 34px; border-radius: 6px 6px 2px 2px;
-  background: var(--bars); min-height: 2px;
+  background: var(--barc, var(--bars)); min-height: 2px; opacity: 0.72;
   transform-origin: bottom; animation: grow 0.8s var(--ease) backwards;
-  transition: background 0.25s;
+  transition: opacity 0.25s;
 }
-.wbar:hover .wbar-fill { background: var(--coral); }
-.wbar.today .wbar-fill { background: var(--violet); }
+.wbar:hover .wbar-fill { opacity: 1; }
+.wbar.today .wbar-fill { opacity: 1; box-shadow: inset 0 0 0 2px rgba(61, 43, 31, 0.3); }
+.wbar.today .wbar-day { color: var(--ink); font-weight: 700; }
+.seg-mini { align-self: flex-start; margin-bottom: 14px; }
+.seg-mini button { padding: 6px 12px; font-size: 12px; }
 @keyframes grow { from { transform: scaleY(0); } }
 .wbar-val { font-size: 10px; color: var(--ink-2); font-weight: 600; opacity: 0; transition: opacity 0.2s; position: absolute; top: -6px; }
 .wbar:hover .wbar-val { opacity: 1; }
@@ -605,6 +610,41 @@ input, select { font: inherit; }
 /* ---------- desktop ---------- */
 @media (min-width: 720px) {
   .app { max-width: 560px; }
+}
+
+/* ---------- pantallas angostas: que todo entre sin desbordes ---------- */
+.hero-meta { flex-wrap: wrap; row-gap: 4px; text-align: center; }
+@media (max-width: 400px) {
+  .app { padding-left: 12px; padding-right: 12px; }
+  .card { padding: 16px 14px; }
+  .brand-text h1 { font-size: 16px; letter-spacing: 1.5px; }
+  .date-pill { padding: 8px 11px; font-size: 11px; letter-spacing: 0.5px; }
+  .macros { gap: 7px; }
+  .macro { padding: 10px 9px; }
+  .macro-head { font-size: 9px; letter-spacing: 0.5px; }
+  .macro-val { font-size: 12px; }
+  .macro-val b { font-size: 15px; }
+  .weight-now b { font-size: 22px; }
+  .weight-trend { font-size: 10.5px; }
+  .photo-inner { flex-wrap: wrap; padding: 15px 16px; }
+  .photo-btns { flex-direction: row; width: 100%; }
+  .photo-btns .photo-cta { flex: 1; text-align: center; margin-left: 0; }
+  .meal { gap: 9px; padding: 12px 12px; }
+  .meal-macros { font-size: 10.5px; }
+  .meal-macros i { margin-right: 6px; }
+  .meal-kcal { font-size: 14px; }
+  .meal-actions { flex-direction: column; gap: 0; }
+  .meal-actions button { padding: 3px 5px; font-size: 13px; }
+  .hero-kcal { font-size: 58px; }
+  .batt-num { font-size: 44px; }
+  .bal-nums b { font-size: 34px; }
+  .tower-wrap { gap: 16px; }
+  .eq { gap: 4px; }
+  .eq-bar { width: 13px; }
+  .form-grid { gap: 10px; }
+  .seg button { padding: 7px 13px; font-size: 12px; }
+  .units-row { gap: 8px; }
+  .chips .chip { padding: 8px 11px; font-size: 12px; }
 }
 
 @media (prefers-reduced-motion: reduce) {

@@ -532,22 +532,37 @@ function renderWeightChart() {
   $("weightRange").textContent = `${diff <= 0 ? "▼" : "▲"} ${Math.abs(diff).toFixed(1)} ${unit} en ${series.length} registros`;
 }
 
+/* métrica activa de la gráfica semanal (kcal o macros, cada una con su meta) */
+let chartMetric = "kcal";
+const METRICS = {
+  kcal: { name: "Calorías", color: "#EA580C", unit: "kcal" },
+  protein: { name: "Proteína", color: "#7C3AED", unit: "g" },
+  carbs: { name: "Carbos", color: "#D97706", unit: "g" },
+  fat: { name: "Grasa", color: "#E11D48", unit: "g" },
+};
+
 function renderLog() {
   const g = App.state.goals;
   renderWeightChart();
 
-  // gráfica de 7 días
+  // gráfica de 7 días de la métrica elegida
+  const m = METRICS[chartMetric];
+  const goal = g[chartMetric];
+  $("weekTitle").textContent = `${m.name} · últimos 7 días`;
+  document.querySelectorAll("#segChart button").forEach((b) => b.classList.toggle("seg-on", b.dataset.m === chartMetric));
+
   const end = App.todayKey();
   const keys = Array.from({ length: 7 }, (_, i) => App.shiftKey(end, i - 6));
-  const totals = keys.map((k) => App.dayTotals(k).kcal);
-  const max = Math.max(g.kcal * 1.15, ...totals, 1);
+  const totals = keys.map((k) => App.dayTotals(k)[chartMetric]);
+  const max = Math.max(goal * 1.15, ...totals, 1);
 
   const chart = $("weekChart");
+  chart.style.setProperty("--barc", m.color);
   chart.innerHTML = "";
   const goalLine = document.createElement("div");
   goalLine.className = "goal-line";
   // la zona de barras ocupa el alto del chart menos la etiqueta del día (~30px)
-  goalLine.style.bottom = `${22 + (g.kcal / max) * (150 - 30)}px`;
+  goalLine.style.bottom = `${22 + (goal / max) * (150 - 30)}px`;
   chart.appendChild(goalLine);
 
   keys.forEach((k, i) => {
@@ -558,7 +573,7 @@ function renderLog() {
       <span class="wbar-val">${totals[i]}</span>
       <div class="wbar-fill" style="height:${Math.max(2, h)}px; animation-delay:${i * 70}ms"></div>
       <span class="wbar-day">${App.formatDate(k, { weekday: "short" }).slice(0, 3)}</span>`;
-    bar.title = `${App.formatDate(k)}: ${totals[i]} kcal`;
+    bar.title = `${App.formatDate(k)}: ${totals[i]} ${m.unit} (meta ${goal})`;
     bar.addEventListener("click", () => { App.setDate(k); switchView("hoy"); });
     chart.appendChild(bar);
   });
@@ -967,6 +982,12 @@ function bindEvents() {
   $("chatChips").addEventListener("click", (e) => {
     const q = e.target.closest(".chip")?.dataset.q;
     if (q) sendToBot(q);
+  });
+
+  // métrica de la gráfica semanal
+  $("segChart").addEventListener("click", (e) => {
+    const m = e.target.closest("button")?.dataset.m;
+    if (m) { chartMetric = m; renderLog(); }
   });
 
   // unidades
