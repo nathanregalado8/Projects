@@ -389,12 +389,24 @@ function renderHoy() {
   restEl.textContent = `llevas ${t.kcal} kcal`;
   restEl.classList.toggle("over", t.kcal > g.kcal);
 
-  // macros
+  // macros — su barrita sigue la temática del héroe del día (versión mini)
+  const heroMode = activeHeroMode();
+  const grp = ["battery", "tower", "eq", "pixels"].includes(heroMode) ? "seg"
+    : ["liquid", "tube", "thermo"].includes(heroMode) ? "liq" : "bar";
   const macroMap = [["Protein", t.protein, g.protein], ["Carbs", t.carbs, g.carbs], ["Fat", t.fat, g.fat]];
   for (const [key, val, goal] of macroMap) {
     animateNumber($("m" + key), val);
     $("g" + key).textContent = goal;
-    $("b" + key).style.width = Math.min(100, (val / goal) * 100) + "%";
+    const pctM = Math.min(100, (val / goal) * 100);
+    const track = $("b" + key).parentElement;
+    track.className = "macro-bar " + grp;
+    const color = { Protein: "#7c3aed", Carbs: "#d97706", Fat: "#e11d48" }[key];
+    if (grp === "seg") {
+      const on = Math.round((pctM / 100) * 6);
+      track.innerHTML = Array.from({ length: 6 }, (_, i) => `<i class="${i < on ? "on" : ""}" style="--c:${color}"></i>`).join("");
+    } else {
+      track.innerHTML = `<div class="macro-fill ${grp === "liq" ? "liq" : ""}" id="b${key}" style="--c:${color}; width:${pctM}%"></div>`;
+    }
   }
 
   // peso
@@ -412,6 +424,11 @@ function renderHoy() {
       <div class="meal-info">
         <div class="meal-name">${escapeHtml(m.name)}</div>
         <div class="meal-macros"><i>P ${m.protein}g</i><i>C ${m.carbs}g</i><i>G ${m.fat}g</i>${m.time ? `<i>${m.time}</i>` : ""}</div>
+        <div class="meal-bars">
+          <b><i style="--c:#7c3aed; width:${Math.min(100, (m.protein / g.protein) * 100)}%"></i></b>
+          <b><i style="--c:#d97706; width:${Math.min(100, (m.carbs / g.carbs) * 100)}%"></i></b>
+          <b><i style="--c:#e11d48; width:${Math.min(100, (m.fat / g.fat) * 100)}%"></i></b>
+        </div>
       </div>
       <div class="meal-kcal">${m.kcal}<small> kcal</small></div>
       <div class="meal-actions">
@@ -478,7 +495,7 @@ function renderWeightChart() {
   const empty = $("weightEmpty");
   const unit = App.state.units.weight;
 
-  if (series.length < 2) {
+  if (!series.length) {
     svg.innerHTML = "";
     svg.style.display = "none";
     empty.style.display = "block";
@@ -487,6 +504,17 @@ function renderWeightChart() {
   }
   svg.style.display = "block";
   empty.style.display = "none";
+
+  // un solo registro: muestra el punto con su valor
+  if (series.length === 1) {
+    const p0 = series[0];
+    svg.innerHTML = `
+      <circle class="w-dot w-dot-end" cx="170" cy="75" r="6"><title>${App.formatDate(p0.key)}: ${App.fmtWeight(p0.kg)}</title></circle>
+      <text class="val-lbl" x="170" y="58" text-anchor="middle">${App.kgToUnit(p0.kg).toFixed(1)} ${unit}</text>
+      <text class="axis-lbl" x="170" y="100" text-anchor="middle">${App.formatDate(p0.key)} · registra más días para ver tu línea</text>`;
+    $("weightRange").textContent = "primer registro ✓";
+    return;
+  }
 
   const W = 340, H = 150, L = 8, R = 34, T = 14, B = 22;
   const kgs = series.map((p) => p.kg);
@@ -524,7 +552,7 @@ function renderWeightChart() {
     <path class="w-area" fill="url(#wAreaGrad)" d="${line} L${x(lastP.key).toFixed(1)},${H - B} L${L},${H - B} Z"/>
     <path class="w-line" d="${line}"/>
     ${dots}
-    <text class="val-lbl" x="${Math.min(x(lastP.key) + 8, W - 2).toFixed(1)}" y="${(y(lastP.kg) + 4).toFixed(1)}">${App.kgToUnit(lastP.kg).toFixed(1)}</text>
+    <text class="val-lbl" x="${x(lastP.key).toFixed(1)}" y="${Math.max(12, y(lastP.kg) - 11).toFixed(1)}" text-anchor="end">${App.kgToUnit(lastP.kg).toFixed(1)}</text>
     ${xLbls}`;
 
   const first = series[0];
