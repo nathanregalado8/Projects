@@ -231,12 +231,12 @@ async function askClaude(userText, onAction) {
 }
 
 /* ---------- Análisis de foto (visión + tool use forzado) ---------- */
-async function analyzeFoodPhoto(base64jpeg) {
+async function analyzeFoodPhoto(base64jpeg, note = "") {
   const messages = [{
     role: "user",
     content: [
       { type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64jpeg } },
-      { type: "text", text: "Analiza esta foto de comida. Identifica el plato y estima calorías y macros realistas de la porción visible. Luego regístrala con la herramienta add_meal. Si la imagen no es comida, dilo y no registres nada." },
+      { type: "text", text: "Analiza esta foto de comida. Identifica el plato y estima calorías y macros realistas de la porción visible. Luego regístrala con la herramienta add_meal. Si la imagen no es comida, dilo y no registres nada." + (note ? `\n\nDetalles del usuario sobre la comida (tenlos muy en cuenta para las cantidades): ${note}` : "") },
     ],
   }];
 

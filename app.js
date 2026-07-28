@@ -189,15 +189,18 @@ const FOOD_EMOJIS = [
 ];
 const foodEmoji = (name) => (FOOD_EMOJIS.find(([re]) => re.test(name)) || [, "🍽️"])[1];
 
-/* ---------- héroe de calorías (3 estilos) ---------- */
-const HERO_MODES = ["liquid", "battery", "hero"];
-const HERO_NAMES = { auto: "auto", liquid: "líquido", battery: "energía", hero: "número" };
+/* ---------- héroe de calorías (10 estilos) ---------- */
+const HERO_MODES = ["liquid", "battery", "hero", "tower", "percent", "eq", "thermo", "pixels", "tube", "balance"];
+const HERO_NAMES = {
+  auto: "auto", liquid: "líquido", battery: "energía", hero: "número", tower: "torre",
+  percent: "%", eq: "ecualizador", thermo: "termo", pixels: "píxeles", tube: "tubo", balance: "balance",
+};
 
 function activeHeroMode() {
   const pref = App.state.heroStyle;
   if (pref !== "auto") return pref;
   const dayN = Math.floor(new Date(App.state.currentDate + "T12:00:00").getTime() / 86400000);
-  return HERO_MODES[dayN % 3]; // rota día a día
+  return HERO_MODES[dayN % HERO_MODES.length]; // rota día a día
 }
 
 const WAVE_PATH = "M0,12 C10,4 20,4 30,12 C40,20 50,20 60,12 C70,4 80,4 90,12 C100,20 110,20 120,12 L120,26 L0,26 Z";
@@ -226,12 +229,61 @@ function renderHero(t, g) {
           <div class="hero-kcal-lbl" id="heroLbl">kcal restantes</div>
           <div class="batt" id="battRow">${'<div class="batt-cell"></div>'.repeat(12)}</div>
         </div>`;
-    } else {
+    } else if (mode === "hero") {
       stage.innerHTML = `
         <div class="hero-num-wrap">
           <div class="hero-kcal" id="heroKcal">0</div>
           <div class="hero-kcal-lbl" id="heroLbl">kcal restantes</div>
           <div class="hero-bar"><div class="hero-bar-fill" id="heroBarFill"></div></div>
+        </div>`;
+    } else if (mode === "tower") {
+      stage.innerHTML = `
+        <div class="tower-wrap">
+          <div class="tower" id="towerCol">${'<div class="tower-blk"></div>'.repeat(10)}</div>
+          <div><div class="batt-num"><span id="heroKcal">0</span></div><div class="hero-kcal-lbl" id="heroLbl">kcal restantes</div></div>
+        </div>`;
+    } else if (mode === "percent") {
+      stage.innerHTML = `
+        <div class="hero-num-wrap">
+          <div class="hero-kcal"><span id="pctNum">0</span><span class="pct-sign">%</span></div>
+          <div class="hero-kcal-lbl">de tu meta diaria</div>
+          <div class="hero-kcal-lbl" style="margin-top:4px"><b id="heroKcal" style="color:var(--ink)">0</b> <span id="heroLbl">kcal restantes</span></div>
+        </div>`;
+    } else if (mode === "eq") {
+      stage.innerHTML = `
+        <div class="batt-wrap">
+          <div class="batt-num"><span id="heroKcal">0</span></div>
+          <div class="hero-kcal-lbl" id="heroLbl">kcal restantes</div>
+          <div class="eq" id="eqRow">${[38, 62, 50, 80, 58, 92, 66, 84, 48, 72, 56, 40].map((h) => `<div class="eq-bar" style="--h:${h}px"></div>`).join("")}</div>
+        </div>`;
+    } else if (mode === "thermo") {
+      stage.innerHTML = `
+        <div class="tower-wrap">
+          <div class="thermo"><div class="thermo-fill" id="thermoFill"></div><div class="thermo-bulb"></div></div>
+          <div><div class="batt-num"><span id="heroKcal">0</span></div><div class="hero-kcal-lbl" id="heroLbl">kcal restantes</div></div>
+        </div>`;
+    } else if (mode === "pixels") {
+      stage.innerHTML = `
+        <div class="batt-wrap">
+          <div class="batt-num"><span id="heroKcal">0</span></div>
+          <div class="hero-kcal-lbl" id="heroLbl">kcal restantes</div>
+          <div class="pix" id="pixGrid">${'<div class="pix-dot"></div>'.repeat(60)}</div>
+        </div>`;
+    } else if (mode === "tube") {
+      stage.innerHTML = `
+        <div class="batt-wrap">
+          <div class="batt-num"><span id="heroKcal">0</span></div>
+          <div class="hero-kcal-lbl" id="heroLbl">kcal restantes</div>
+          <div class="tube"><div class="tube-fill" id="tubeFill"></div></div>
+        </div>`;
+    } else {
+      stage.innerHTML = `
+        <div class="bal-wrap">
+          <div class="bal-nums">
+            <div><b id="balEat">0</b><span>llevas</span></div>
+            <div><b id="heroKcal">0</b><span id="heroLbl">restantes</span></div>
+          </div>
+          <div class="bal-bar"><div class="bal-fill" id="balFill"></div></div>
         </div>`;
     }
   }
@@ -259,10 +311,34 @@ function renderHero(t, g) {
         c.classList.toggle("hot", over);
       }, i * 45);
     });
-  } else {
+  } else if (mode === "hero") {
     const fill = $("heroBarFill");
     fill.style.width = pct * 100 + "%";
     fill.classList.toggle("over", over);
+  } else if (mode === "tower") {
+    [...$("towerCol").children].forEach((b, i) =>
+      setTimeout(() => { b.classList.toggle("on", i < Math.round(pct * 10)); b.classList.toggle("hot", over); }, i * 50));
+  } else if (mode === "percent") {
+    animateNumber($("pctNum"), Math.round(pct * 100));
+  } else if (mode === "eq") {
+    [...$("eqRow").children].forEach((b, i) =>
+      setTimeout(() => { b.classList.toggle("on", i < Math.round(pct * 12)); b.classList.toggle("hot", over); }, i * 45));
+  } else if (mode === "thermo") {
+    const f = $("thermoFill");
+    f.style.height = Math.min(100, pct * 100) + "%";
+    f.classList.toggle("over", over);
+  } else if (mode === "pixels") {
+    [...$("pixGrid").children].forEach((d, i) =>
+      setTimeout(() => { d.classList.toggle("on", i < Math.round(pct * 60)); d.classList.toggle("hot", over); }, i * 12));
+  } else if (mode === "tube") {
+    const f = $("tubeFill");
+    f.style.width = Math.min(100, pct * 100) + "%";
+    f.classList.toggle("over", over);
+  } else if (mode === "balance") {
+    animateNumber($("balEat"), t.kcal);
+    const f = $("balFill");
+    f.style.width = Math.min(100, pct * 100) + "%";
+    f.classList.toggle("over", over);
   }
 }
 
@@ -768,17 +844,40 @@ function resizeImage(file, maxSide = 1024) {
   });
 }
 
-async function handlePhoto(file) {
+function handlePhoto(file) {
   if (!App.state.apiKey) {
     toast("Agrega tu API key en Ajustes para analizar fotos 🤖");
     mealModal();
     return;
   }
+  // comentario opcional para dar más contexto a la IA
+  openModal(`
+    <h3>📸 Detalles de la foto</h3>
+    <label>Comentario (opcional)
+      <input id="fpNote" type="text" placeholder="Ej. arepa con queso, porción grande, sin salsa">
+    </label>
+    <p class="form-note" style="margin-top:10px">Ayuda a la IA a calcular macros más precisos.</p>
+    <div class="modal-btns">
+      <button class="btn btn-ghost" id="fpCancel">Cancelar</button>
+      <button class="btn btn-primary" id="fpGo">Analizar</button>
+    </div>`,
+    (box) => {
+      box.querySelector("#fpNote").focus();
+      box.querySelector("#fpCancel").onclick = closeModal;
+      box.querySelector("#fpGo").onclick = () => {
+        const note = box.querySelector("#fpNote").value.trim();
+        closeModal();
+        runPhotoAnalysis(file, note);
+      };
+    });
+}
+
+async function runPhotoAnalysis(file, note) {
   $("photoInner").hidden = true;
   $("photoLoading").hidden = false;
   try {
     const b64 = await resizeImage(file);
-    const { text, actions } = await analyzeFoodPhoto(b64);
+    const { text, actions } = await analyzeFoodPhoto(b64, note);
     for (const a of actions) pushChat("action", a);
     if (text) pushChat("bot", text);
     if (actions.length) {
@@ -793,7 +892,8 @@ async function handlePhoto(file) {
   } finally {
     $("photoInner").hidden = false;
     $("photoLoading").hidden = true;
-    $("photoInput").value = "";
+    $("photoInputCam").value = "";
+    $("photoInputGal").value = "";
   }
 }
 
@@ -808,6 +908,8 @@ function bindEvents() {
   $("prevDay").addEventListener("click", () => App.setDate(App.shiftKey(App.state.currentDate, -1)));
   $("nextDay").addEventListener("click", () => App.setDate(App.shiftKey(App.state.currentDate, 1)));
   $("dateInput").addEventListener("change", (e) => e.target.value && App.setDate(e.target.value));
+  // abre el calendario nativo al tocar la píldora de fecha
+  $("datePill").addEventListener("click", () => { try { $("dateInput").showPicker(); } catch {} });
 
   // héroe: cambiar estilo (auto → líquido → energía → número)
   $("heroSwitch").addEventListener("click", () => {
@@ -848,9 +950,12 @@ function bindEvents() {
     }
   });
 
-  // foto
-  $("photoCard").addEventListener("click", () => !$("photoLoading").hidden || $("photoInput").click());
-  $("photoInput").addEventListener("change", (e) => e.target.files[0] && handlePhoto(e.target.files[0]));
+  // foto: tomar con cámara o subir de galería
+  $("btnCam").addEventListener("click", (e) => { e.stopPropagation(); $("photoInputCam").click(); });
+  $("btnGal").addEventListener("click", (e) => { e.stopPropagation(); $("photoInputGal").click(); });
+  $("photoCard").addEventListener("click", () => !$("photoLoading").hidden || $("photoInputGal").click());
+  $("photoInputCam").addEventListener("change", (e) => e.target.files[0] && handlePhoto(e.target.files[0]));
+  $("photoInputGal").addEventListener("change", (e) => e.target.files[0] && handlePhoto(e.target.files[0]));
 
   // chat
   $("chatForm").addEventListener("submit", (e) => {

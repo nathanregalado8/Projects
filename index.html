@@ -106,7 +106,8 @@
 
       <!-- Foto de tu comida -->
       <section class="card photo-card" id="photoCard">
-        <input type="file" id="photoInput" accept="image/*" capture="environment" hidden>
+        <input type="file" id="photoInputCam" accept="image/*" capture="environment" hidden>
+        <input type="file" id="photoInputGal" accept="image/*" hidden>
         <div class="photo-inner" id="photoInner">
           <div class="photo-icon">
             <svg viewBox="0 0 24 24" width="26" height="26" fill="none" stroke="#FF5A3C" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round">
@@ -114,11 +115,14 @@
               <circle cx="12" cy="13" r="3.6"/>
             </svg>
           </div>
-          <div>
+          <div style="flex:1">
             <div class="photo-title">Foto de tu comida</div>
             <div class="photo-sub">La IA calcula calorías y macros por ti</div>
           </div>
-          <span class="photo-cta">ANALIZAR</span>
+          <div class="photo-btns">
+            <button class="photo-cta" id="btnCam">📷 TOMAR</button>
+            <button class="photo-cta alt" id="btnGal">🖼️ SUBIR</button>
+          </div>
         </div>
         <div class="photo-loading" id="photoLoading" hidden>
           <div class="spinner"></div>
