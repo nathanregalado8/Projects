@@ -426,15 +426,23 @@ function renderHoy() {
   day.meals.forEach((m) => {
     const li = document.createElement("li");
     li.className = "meal";
+    const mrow = (label, val, goalVal, color) => `
+      <div class="mrow">
+        <span class="mrow-lbl" style="--c:${color}">${label}</span>
+        <b class="mrow-val">${val}g</b>
+        <span class="mrow-track"><span class="mrow-fill" style="--c:${color}; width:${Math.min(100, (val / goalVal) * 100)}%"></span></span>
+      </div>`;
     li.innerHTML = `
       <span class="meal-emoji">${foodEmoji(m.name)}</span>
       <div class="meal-info">
-        <div class="meal-name">${escapeHtml(m.name)}</div>
-        <div class="meal-macros"><i>P ${m.protein}g</i><i>C ${m.carbs}g</i><i>G ${m.fat}g</i>${m.time ? `<i>${m.time}</i>` : ""}</div>
-        <div class="meal-bars">
-          <b><i style="--c:#7c3aed; width:${Math.min(100, (m.protein / g.protein) * 100)}%"></i></b>
-          <b><i style="--c:#d97706; width:${Math.min(100, (m.carbs / g.carbs) * 100)}%"></i></b>
-          <b><i style="--c:#e11d48; width:${Math.min(100, (m.fat / g.fat) * 100)}%"></i></b>
+        <div class="meal-top">
+          <div class="meal-name">${escapeHtml(m.name)}</div>
+          ${m.time ? `<span class="meal-time">${m.time}</span>` : ""}
+        </div>
+        <div class="meal-mrows">
+          ${mrow("P", m.protein, g.protein, "#7c3aed")}
+          ${mrow("C", m.carbs, g.carbs, "#d97706")}
+          ${mrow("G", m.fat, g.fat, "#e11d48")}
         </div>
       </div>
       <div class="meal-kcal">${m.kcal}<small> kcal</small></div>

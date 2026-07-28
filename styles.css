@@ -305,17 +305,14 @@ input, select, textarea { font-family: inherit; font-size: 16px; }
 .macro-bar { height: 6px; border-radius: 4px; background: #EADCC7; overflow: hidden; }
 .macro-fill { height: 100%; width: 0%; border-radius: 4px; background: var(--c); transition: width 0.9s var(--ease); }
 /* variantes que siguen la temática del héroe */
-.macro-bar.seg { display: flex; gap: 2.5px; background: none; overflow: visible; }
-.macro-bar.seg i { flex: 1; border-radius: 2.5px; background: #EADCC7; transition: background 0.35s, transform 0.35s var(--spring); }
+.macro-bar.seg { display: flex; align-items: center; gap: 2.5px; height: 6px; background: none; overflow: visible; }
+.macro-bar.seg i { flex: 1 1 0; height: 6px; min-height: 6px; border-radius: 2.5px; background: #EADCC7; transition: background 0.35s, transform 0.35s var(--spring); }
 .macro-bar.seg i.on { background: var(--c); transform: scaleY(1.35); }
 .macro-bar.liq { height: 9px; border-radius: 6px; }
 .macro-fill.liq { border-radius: 6px; position: relative; overflow: hidden; }
 .macro-fill.liq::after { content: ""; position: absolute; inset: 0; background: linear-gradient(90deg, transparent, rgba(255,255,255,0.55), transparent); background-size: 200% 100%; animation: shimmer 2.4s linear infinite; }
 
 /* barritas de macros por comida */
-.meal-bars { display: flex; gap: 5px; margin-top: 6px; }
-.meal-bars b { flex: 1; height: 4px; border-radius: 3px; background: #F5EADD; overflow: hidden; }
-.meal-bars b i { display: block; height: 100%; border-radius: 3px; background: var(--c); }
 
 /* ---------- peso ---------- */
 .weight-card { display: flex; align-items: center; gap: 14px; flex-wrap: wrap; }
@@ -391,9 +388,15 @@ input, select, textarea { font-family: inherit; font-size: 16px; }
 @keyframes mealOut { to { opacity: 0; transform: translateX(30px); } }
 .meal-emoji { font-size: 21px; }
 .meal-info { flex: 1; min-width: 0; }
-.meal-name { font-weight: 600; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
-.meal-macros { font-size: 11.5px; color: var(--ink-2); margin-top: 2px; }
-.meal-macros i { font-style: normal; margin-right: 10px; }
+.meal-top { display: flex; align-items: baseline; gap: 8px; }
+.meal-name { flex: 1; min-width: 0; font-weight: 600; font-size: 14.5px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.meal-time { flex-shrink: 0; font-size: 10.5px; color: var(--ink-3); }
+.meal-mrows { display: flex; flex-direction: column; gap: 3px; margin-top: 6px; }
+.mrow { display: flex; align-items: center; gap: 6px; }
+.mrow-lbl { flex-shrink: 0; width: 12px; font-size: 10px; font-weight: 700; color: var(--c); }
+.mrow-val { flex-shrink: 0; width: 30px; font-size: 10.5px; color: var(--ink-2); font-weight: 400; }
+.mrow-track { flex: 1; height: 4px; border-radius: 3px; background: #EADCC7; overflow: hidden; }
+.mrow-fill { display: block; height: 100%; border-radius: 3px; background: var(--c); }
 .meal-kcal { font-weight: 700; font-size: 15px; white-space: nowrap; color: var(--bars); }
 .meal-kcal small { font-weight: 400; color: var(--ink-3); font-size: 10px; }
 .meal-actions { display: flex; gap: 4px; }
