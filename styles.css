@@ -330,8 +330,8 @@ input, select, textarea { font-family: inherit; font-size: 16px; }
 .mrow { display: flex; align-items: center; gap: 8px; }
 .mrow-chip { width: 15px; height: 15px; border-radius: 5px; background: var(--cbg); color: var(--c); font-size: 9px; font-weight: 800; display: grid; place-items: center; flex-shrink: 0; }
 .mrow-g { width: 34px; font-family: "Sora", sans-serif; font-weight: 700; font-size: 11.5px; color: var(--ink-2); flex-shrink: 0; }
-.mrow-track { flex: 1; height: 5px; border-radius: 999px; background: var(--wash); overflow: hidden; }
-.mrow-fill { display: block; height: 100%; border-radius: 999px; background: var(--c); }
+.mrow-track { flex: 1; display: flex; align-items: stretch; height: 5px; min-height: 5px; border-radius: 999px; background: var(--wash); overflow: hidden; }
+.mrow-fill { display: block; height: 5px; min-height: 5px; flex: 0 0 auto; border-radius: 999px; background: var(--c); }
 
 /* ---------- log ---------- */
 .chart-top { display: flex; align-items: baseline; justify-content: space-between; gap: 8px; margin-bottom: 6px; }
