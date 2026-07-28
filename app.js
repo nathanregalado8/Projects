@@ -217,25 +217,32 @@ function renderHero(t, g) {
             <svg class="liquid-wave" viewBox="0 0 120 26" preserveAspectRatio="none"><path d="${WAVE_PATH}"/></svg>
             <svg class="liquid-wave w2" viewBox="0 0 120 26" preserveAspectRatio="none"><path d="${WAVE_PATH}"/></svg>
           </div>
-          <div class="liquid-kcal"><span id="heroKcal">0</span><small>KCAL</small></div>
+          <div class="liquid-kcal"><span id="heroKcal">0</span><small id="heroLbl">KCAL RESTANTES</small></div>
         </div>`;
     } else if (mode === "battery") {
       stage.innerHTML = `
         <div class="batt-wrap">
-          <div class="batt-num"><span id="heroKcal">0</span><small> kcal</small></div>
+          <div class="batt-num"><span id="heroKcal">0</span></div>
+          <div class="hero-kcal-lbl" id="heroLbl">kcal restantes</div>
           <div class="batt" id="battRow">${'<div class="batt-cell"></div>'.repeat(12)}</div>
         </div>`;
     } else {
       stage.innerHTML = `
         <div class="hero-num-wrap">
           <div class="hero-kcal" id="heroKcal">0</div>
-          <div class="hero-kcal-lbl">kcal consumidas</div>
+          <div class="hero-kcal-lbl" id="heroLbl">kcal restantes</div>
           <div class="hero-bar"><div class="hero-bar-fill" id="heroBarFill"></div></div>
         </div>`;
     }
   }
 
-  animateNumber($("heroKcal"), t.kcal);
+  // como en el diseño: el número protagonista son las kcal RESTANTES
+  const restKcal = g.kcal - t.kcal;
+  animateNumber($("heroKcal"), Math.abs(restKcal));
+  const lbl = $("heroLbl");
+  const lblText = restKcal >= 0 ? "kcal restantes" : "kcal de más";
+  lbl.textContent = mode === "liquid" ? lblText.toUpperCase() : lblText;
+  lbl.classList.toggle("over", restKcal < 0);
   $("heroModeLabel").textContent = HERO_NAMES[App.state.heroStyle];
 
   if (mode === "liquid") {
@@ -302,10 +309,9 @@ function renderHoy() {
   // héroe
   renderHero(t, g);
   $("editKcalGoal").textContent = g.kcal;
-  const rest = g.kcal - t.kcal;
   const restEl = $("heroRest");
-  restEl.textContent = rest >= 0 ? `te quedan ${rest}` : `${-rest} por encima`;
-  restEl.classList.toggle("over", rest < 0);
+  restEl.textContent = `llevas ${t.kcal} kcal`;
+  restEl.classList.toggle("over", t.kcal > g.kcal);
 
   // macros
   const macroMap = [["Protein", t.protein, g.protein], ["Carbs", t.carbs, g.carbs], ["Fat", t.fat, g.fat]];
