@@ -398,14 +398,21 @@ function renderHoy() {
     animateNumber($("m" + key), val);
     $("g" + key).textContent = goal;
     const pctM = Math.min(100, (val / goal) * 100);
-    const track = $("b" + key).parentElement;
-    track.className = "macro-bar " + grp;
     const color = { Protein: "#7c3aed", Carbs: "#d97706", Fat: "#e11d48" }[key];
+    // el track se busca por la tarjeta (estable aunque cambie su contenido)
+    const track = document.querySelector(`.macro[data-macro="${key.toLowerCase()}"] .macro-bar`);
+    if (track.dataset.grp !== grp) {
+      track.dataset.grp = grp;
+      track.className = "macro-bar" + (grp === "bar" ? "" : " " + grp);
+      track.innerHTML = grp === "seg"
+        ? Array.from({ length: 6 }, () => `<i style="--c:${color}"></i>`).join("")
+        : `<div class="macro-fill${grp === "liq" ? " liq" : ""}" style="--c:${color}; width:0%"></div>`;
+    }
     if (grp === "seg") {
       const on = Math.round((pctM / 100) * 6);
-      track.innerHTML = Array.from({ length: 6 }, (_, i) => `<i class="${i < on ? "on" : ""}" style="--c:${color}"></i>`).join("");
+      [...track.children].forEach((c, i) => setTimeout(() => c.classList.toggle("on", i < on), i * 60));
     } else {
-      track.innerHTML = `<div class="macro-fill ${grp === "liq" ? "liq" : ""}" id="b${key}" style="--c:${color}; width:${pctM}%"></div>`;
+      requestAnimationFrame(() => (track.firstElementChild.style.width = pctM + "%"));
     }
   }
 
