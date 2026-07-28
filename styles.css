@@ -49,9 +49,9 @@ input, select, textarea { font-family: inherit; font-size: 16px; }
 
 /* ---------- fondo ---------- */
 .bg { position: fixed; inset: 0; z-index: -1; overflow: hidden; }
-.blob { position: absolute; border-radius: 50%; filter: blur(60px); }
-.blob-1 { width: 260px; height: 260px; background: rgba(255,170,110,.35); top: -60px; left: -70px; animation: blobFloat 9s ease-in-out infinite; }
-.blob-2 { width: 220px; height: 220px; background: rgba(163,230,53,.22); top: 220px; right: -80px; animation: blobFloat 11s ease-in-out infinite reverse; }
+.blob { position: absolute; border-radius: 50%; filter: blur(48px); will-change: auto; }
+.blob-1 { width: 260px; height: 260px; background: rgba(255,170,110,.35); top: -60px; left: -70px; }
+.blob-2 { width: 220px; height: 220px; background: rgba(163,230,53,.22); top: 220px; right: -80px; }
 @keyframes blobFloat { 0%,100% { transform: translate(0,0) scale(1); } 50% { transform: translate(14px,-18px) scale(1.08); } }
 .bubbles { position: absolute; inset: 0; }
 .bub { position: absolute; bottom: -20px; border-radius: 50%; border: 1.5px solid rgba(255,138,0,.35); background: rgba(255,138,0,.08); animation: bubbleUp linear infinite; }
@@ -292,7 +292,7 @@ input, select, textarea { font-family: inherit; font-size: 16px; }
   display: flex; align-items: center; justify-content: center; gap: 8px; padding: 13px;
   border-radius: 16px; background: var(--grad); color: #fff;
   font-family: "Sora", sans-serif; font-weight: 700; font-size: 13px; letter-spacing: .8px;
-  animation: pulseGlow 2.6s ease-in-out infinite; transition: transform .18s var(--ease);
+  box-shadow: 0 6px 22px rgba(255,90,60,.4); transition: transform .18s var(--ease);
 }
 .pbtn:hover { transform: translateY(-2px); }
 .pbtn:active { transform: scale(.96); }
@@ -410,7 +410,7 @@ input, select, textarea { font-family: inherit; font-size: 16px; }
 .pbox-v { width: 100%; min-width: 0; background: none; border: none; outline: none; font-family: "Sora", sans-serif; font-weight: 700; font-size: 15px; color: var(--ink); padding: 0; }
 select.pbox-v { margin-left: -2px; }
 .pbox-dual { display: flex; gap: 6px; }
-.calc-btn { width: 100%; margin-top: 14px; padding: 14px; border-radius: 16px; background: var(--grad); color: #fff; font-family: "Sora", sans-serif; font-weight: 700; font-size: 15px; animation: pulseGlow 2.6s ease-in-out infinite; transition: transform .18s var(--ease); }
+.calc-btn { width: 100%; margin-top: 14px; padding: 14px; border-radius: 16px; background: var(--grad); color: #fff; font-family: "Sora", sans-serif; font-weight: 700; font-size: 15px; box-shadow: 0 6px 22px rgba(255,90,60,.4); transition: transform .18s var(--ease); }
 .calc-btn:active { transform: scale(.97); }
 .sug { text-align: center; font-size: 12.5px; color: var(--ink-3); margin-top: 10px; line-height: 1.5; }
 .sug b { color: var(--orange-ink); }
@@ -442,8 +442,7 @@ select.pbox-v { margin-left: -2px; }
   position: fixed; left: 50%; bottom: 0; transform: translateX(-50%);
   width: min(460px, 100%); display: grid; grid-template-columns: repeat(4, 1fr);
   padding: 10px 20px calc(14px + env(safe-area-inset-bottom));
-  background: rgba(255,249,242,.85); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px);
-  border-top: 1px solid var(--line); z-index: 30;
+  background: #FFFBF6; border-top: 1px solid var(--line); z-index: 30;
 }
 .tab { position: relative; display: flex; flex-direction: column; align-items: center; gap: 4px; color: var(--muted); transition: color .25s, transform .15s; }
 .tab span { font-size: 11px; font-weight: 600; }
@@ -458,7 +457,7 @@ select.pbox-v { margin-left: -2px; }
 .tab-glow.on { opacity: 1; animation: cellFlick 1.6s infinite; }
 
 /* ---------- hoja inferior ---------- */
-.sheet-backdrop { position: fixed; inset: 0; z-index: 100; background: rgba(42,26,16,.42); backdrop-filter: blur(3px); animation: fadeIn .25s ease; display: flex; align-items: flex-end; justify-content: center; }
+.sheet-backdrop { position: fixed; inset: 0; z-index: 100; background: rgba(42,26,16,.5); animation: fadeIn .25s ease; display: flex; align-items: flex-end; justify-content: center; }
 .sheet {
   width: min(460px, 100%); background: var(--bg); border-radius: 28px 28px 0 0;
   padding: 18px 14px calc(30px + env(safe-area-inset-bottom));
@@ -469,7 +468,7 @@ select.pbox-v { margin-left: -2px; }
 .grabber { width: 44px; height: 4px; border-radius: 999px; background: var(--line-2); align-self: center; flex-shrink: 0; }
 .sh-head { display: flex; align-items: center; gap: 12px; }
 .sh-icon { position: relative; width: 62px; height: 62px; border-radius: 18px; background: var(--chip-bg); border: 1px solid var(--line); display: grid; place-items: center; font-size: 28px; overflow: hidden; flex-shrink: 0; }
-.sh-icon .beam { position: absolute; left: 0; right: 0; height: 22px; background: linear-gradient(180deg, transparent, rgba(255,138,0,.35), transparent); animation: scanBeam 2.6s linear infinite; }
+.sh-icon .beam { will-change: transform; position: absolute; left: 0; right: 0; height: 22px; background: linear-gradient(180deg, transparent, rgba(255,138,0,.35), transparent); animation: scanBeam 2.6s linear infinite; }
 .sh-icon.green { width: 46px; height: 46px; border-radius: 15px; background: rgba(22,163,74,.12); border: none; }
 .sh-title { font-family: "Sora", sans-serif; font-weight: 700; font-size: 16px; color: var(--ink); }
 .sh-sub { font-size: 12.5px; color: var(--ink-3); line-height: 1.4; }
@@ -482,7 +481,7 @@ select.pbox-v { margin-left: -2px; }
 .sh-btns { display: grid; grid-template-columns: 1fr 1.6fr; gap: 10px; }
 .sh-btn { text-align: center; padding: 14px; border-radius: 16px; background: #fff; border: 1.5px solid var(--line); color: var(--brown); font-family: "Sora", sans-serif; font-weight: 700; font-size: 14px; transition: transform .15s; }
 .sh-btn:active { transform: scale(.96); }
-.sh-btn.primary { display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--grad); border: none; color: #fff; letter-spacing: .6px; animation: pulseGlow 2.6s ease-in-out infinite; }
+.sh-btn.primary { display: flex; align-items: center; justify-content: center; gap: 8px; background: var(--grad); border: none; color: #fff; letter-spacing: .6px; box-shadow: 0 6px 22px rgba(255,90,60,.4); }
 .sh-btn.green { background: linear-gradient(135deg, #22C55E, #16A34A); border: none; color: #fff; animation: none; box-shadow: 0 6px 18px rgba(22,163,74,.3); }
 .sh-form { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; }
 .sh-form .pbox { background: #fff; }

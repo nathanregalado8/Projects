@@ -278,7 +278,7 @@ function renderHero(t, g) {
   } else if (mode === "bateria") {
     sub.textContent = `/ ${g.kcal}`;
     const cells = $("batCells").children, on = Math.round(pct * cells.length);
-    [...cells].forEach((c, i) => setTimeout(() => { c.classList.toggle("on", i < on); c.classList.toggle("hot", over); }, i * 45));
+    [...cells].forEach((c, i) => setTimeout(() => { c.classList.toggle("on", i < on); c.classList.toggle("hot", over); }, i * 26));
   } else if (mode === "numero") {
     sub.textContent = `META ${g.kcal}`;
     const f = $("numFill");
@@ -286,11 +286,11 @@ function renderHero(t, g) {
   } else if (mode === "torre") {
     const on = Math.round(pct * 10);
     sub.textContent = `${on} BLOQUES`;
-    [...$("towerCol").children].forEach((b, i) => setTimeout(() => { b.classList.toggle("on", i < on); b.classList.toggle("hot", over); }, i * 55));
+    [...$("towerCol").children].forEach((b, i) => setTimeout(() => { b.classList.toggle("on", i < on); b.classList.toggle("hot", over); }, i * 32));
   } else if (mode === "ecualizador") {
     sub.textContent = `/ ${g.kcal}`;
     const bars = $("eqRow").children, on = Math.round(pct * bars.length);
-    [...bars].forEach((b, i) => setTimeout(() => { b.classList.toggle("on", i < on); b.classList.toggle("hot", over); }, i * 40));
+    [...bars].forEach((b, i) => setTimeout(() => { b.classList.toggle("on", i < on); b.classList.toggle("hot", over); }, i * 24));
   } else if (mode === "termometro") {
     sub.textContent = `DE ${g.kcal} KCAL`;
     $("tlMeta").textContent = `meta ${g.kcal}`;
@@ -301,7 +301,7 @@ function renderHero(t, g) {
   } else if (mode === "pixeles") {
     const on = Math.round(pct * 50);
     sub.textContent = `${on} PÍXELES`;
-    [...$("pixGrid").children].forEach((d, i) => setTimeout(() => { d.classList.toggle("on", i < on); d.classList.toggle("hot", over); }, i * 11));
+    [...$("pixGrid").children].forEach((d, i) => setTimeout(() => { d.classList.toggle("on", i < on); d.classList.toggle("hot", over); }, i * 6));
   } else {
     animateNumber($("balRest"), rest);
     const f = $("balFill");
@@ -375,12 +375,14 @@ function renderHoy() {
   list.innerHTML = "";
   $("mealEmpty").hidden = day.meals.length > 0;
   day.meals.forEach((m) => {
+    // la barra muestra el peso relativo del macro dentro de esta comida
+    const top = Math.max(m.protein, m.carbs, m.fat, 1);
     const mr = (k) => {
       const meta = MACRO_META[k], val = m[k];
       return `<div class="mrow" style="--c:${meta.color};--cbg:${meta.soft}">
         <span class="mrow-chip">${meta.letter}</span>
         <span class="mrow-g">${val} g</span>
-        <span class="mrow-track"><span class="mrow-fill" style="width:${Math.min(100, (val / g[k]) * 100)}%"></span></span>
+        <span class="mrow-track"><span class="mrow-fill" style="width:${Math.max(val ? 6 : 0, (val / top) * 100).toFixed(1)}%"></span></span>
       </div>`;
     };
     const li = document.createElement("div");
@@ -634,7 +636,11 @@ function renderChat() {
   $("chatScroll").scrollTop = $("chatScroll").scrollHeight;
 }
 
-function renderAll() { renderHoy(); renderLog(); }
+/* solo re-dibuja la vista visible: mantiene la app fluida */
+function renderAll() {
+  renderHoy();
+  if ($("view-log").classList.contains("view-active")) renderLog();
+}
 
 /* ==========================================================
    Navegación, hojas y toast
