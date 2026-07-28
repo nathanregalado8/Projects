@@ -1047,7 +1047,8 @@ function bindEvents() {
   };
 
   $("sheetBackdrop").onclick = (e) => { if (e.target === $("sheetBackdrop")) closeSheet(); };
-  document.onkeydown = (e) => e.key === "Escape" && closeSheet();
+  // addEventListener: con document.onkeydown, devolver false cancela la tecla
+  document.addEventListener("keydown", (e) => { if (e.key === "Escape") closeSheet(); });
 }
 
 /* burbujitas del fondo */
