@@ -371,7 +371,12 @@ input, select, textarea { font-family: inherit; font-size: 16px; }
 .bot-avatar .dot { position: absolute; right: -2px; bottom: -2px; width: 11px; height: 11px; border-radius: 50%; background: #22C55E; border: 2px solid #fff; }
 .bot-name { font-family: "Sora", sans-serif; font-weight: 700; font-size: 14.5px; color: var(--ink); }
 .bot-status { font-size: 11.5px; color: var(--ink-3); }
-.chat-scroll { flex: 1; overflow-y: auto; min-height: 0; }
+.chat-scroll { flex: 1; overflow-y: auto; min-height: 0; overscroll-behavior: contain; -webkit-overflow-scrolling: touch; }
+.chat-day { align-self: center; font-size: 10.5px; font-weight: 800; letter-spacing: 1px; text-transform: uppercase; color: var(--muted); background: var(--wash); border-radius: 999px; padding: 5px 12px; margin: 6px 0 2px; }
+/* en el chat la app ocupa la pantalla y el scroll es del hilo */
+body.chat-mode { overflow: hidden; }
+body.chat-mode .app { height: 100dvh; min-height: 0; overflow: hidden; }
+.view-bot { min-height: 0; }
 .chat { display: flex; flex-direction: column; gap: 10px; padding: 2px 2px 8px; }
 .msg { max-width: 86%; padding: 11px 14px; font-size: 13.5px; line-height: 1.5; white-space: pre-wrap; word-wrap: break-word; animation: viewIn .3s var(--ease); }
 .msg-bot { align-self: flex-start; background: #fff; border: 1px solid var(--line); border-radius: 18px 18px 18px 6px; box-shadow: var(--sh-row); color: var(--ink-2); }

@@ -48,6 +48,8 @@ const App = {
     this.state.units ||= { weight: "kg", height: "cm" };
     this.state.heroStyle ||= "auto";
     this.state.profile.ritmo ||= "0.5";
+    const ayer = this.shiftKey(this.todayKey(), -1);
+    for (const m of this.state.chat) m.d ||= ayer;
   },
   save() { localStorage.setItem(STORE_KEY, JSON.stringify(this.state)); },
 
@@ -621,20 +623,53 @@ function renderApiStatus() {
 /* ==========================================================
    Chat
    ========================================================== */
+function chatDayLabel(key) {
+  const t = App.todayKey();
+  if (key === t) return "Hoy";
+  if (key === App.shiftKey(t, -1)) return "Ayer";
+  return App.formatDate(key, { weekday: "long", day: "numeric", month: "long" });
+}
+
+/* abre un hilo nuevo cada día, sin borrar el historial anterior */
+function ensureTodayThread() {
+  const t = App.todayKey();
+  if (App.state.chat.at(-1)?.d === t) return;
+  const n = App.state.profile.nombre;
+  const first = !App.state.chat.length;
+  App.state.chat.push({
+    role: "bot", d: t,
+    text: first
+      ? `¡Hola${n ? " " + n : ""}! 👋 Soy tu coach.\n\nPuedo registrar lo que comes y tu peso, calcular tus metas y recomendarte libros y videos verificados. ¿En qué te ayudo?`
+      : `¡Buenos días${n ? " " + n : ""}! ☀️ Empezamos ${App.formatDate(t, { weekday: "long", day: "numeric", month: "long" })}.\n\nTu historial sigue aquí arriba, así que puedes preguntarme por días anteriores cuando quieras.`,
+  });
+  App.save();
+}
+
 function renderChat() {
+  ensureTodayThread();
   const list = $("chatList");
-  if (!App.state.chat.length) {
-    const n = App.state.profile.nombre;
-    App.state.chat.push({ role: "bot", text: `¡Hola${n ? " " + n : ""}! 👋 Soy tu coach.\n\nPuedo registrar lo que comes y tu peso, calcular tus metas y recomendarte libros y videos verificados. ¿En qué te ayudo?` });
-  }
   list.innerHTML = "";
+  let prev = null;
   for (const m of App.state.chat) {
+    if (m.d && m.d !== prev) {
+      prev = m.d;
+      const sep = document.createElement("div");
+      sep.className = "chat-day";
+      sep.textContent = chatDayLabel(m.d);
+      list.appendChild(sep);
+    }
     const d = document.createElement("div");
     d.className = m.role === "user" ? "msg msg-user" : m.role === "action" ? "msg-act" : "msg msg-bot";
     d.textContent = m.text;
     list.appendChild(d);
   }
-  $("chatScroll").scrollTop = $("chatScroll").scrollHeight;
+  scrollChatToEnd();
+}
+
+function scrollChatToEnd() {
+  const el = $("chatScroll");
+  el.scrollTop = el.scrollHeight;
+  requestAnimationFrame(() => (el.scrollTop = el.scrollHeight));
 }
 
 /* solo re-dibuja la vista visible: mantiene la app fluida */
@@ -652,6 +687,7 @@ function switchView(name) {
   document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("tab-active", t.dataset.view === name));
   if (name === "log") renderLog();
   if (name === "config") renderConfig();
+  document.body.classList.toggle("chat-mode", name === "bot");
   if (name === "bot") { renderChat(); document.querySelector(".tab-glow").classList.remove("on"); }
   window.scrollTo({ top: 0, behavior: "smooth" });
 }
@@ -827,7 +863,7 @@ function apiSheet() {
    ========================================================== */
 let botBusy = false;
 function pushChat(role, text) {
-  App.state.chat.push({ role, text });
+  App.state.chat.push({ role, text, d: App.todayKey() });
   if (App.state.chat.length > 60) App.state.chat = App.state.chat.slice(-60);
   App.save(); renderChat();
 }
@@ -836,7 +872,7 @@ function showTyping() {
   d.className = "msg msg-bot"; d.id = "typingMsg";
   d.innerHTML = `<span class="typing"><i></i><i></i><i></i></span>`;
   $("chatList").appendChild(d);
-  $("chatScroll").scrollTop = $("chatScroll").scrollHeight;
+  scrollChatToEnd();
 }
 const hideTyping = () => $("typingMsg")?.remove();
 
