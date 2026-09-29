@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=10">
+  <link rel="stylesheet" href="styles.css?v=11">
   <link rel="manifest" href="manifest.json">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -100,8 +100,8 @@
             <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><rect x="2" y="7" width="24" height="18" rx="5" stroke="#FF5A3C" stroke-width="2.2"/><path d="M9 7l2-4h6l2 4" stroke="#FF5A3C" stroke-width="2.2" stroke-linejoin="round"/><circle cx="14" cy="16" r="5" stroke="#FF8A00" stroke-width="2.2"/></svg>
           </div>
           <div class="photo-txt">
-            <div class="photo-title">Foto de tu comida</div>
-            <div class="photo-sub">la IA calcula calorías y macros</div>
+            <div class="photo-title">Pesa y escanea</div>
+            <div class="photo-sub">báscula + foto de la etiqueta = macros exactos</div>
           </div>
         </div>
         <div class="photo-btns" id="photoBtns">
@@ -113,9 +113,10 @@
             <svg width="17" height="17" viewBox="0 0 20 20" fill="none"><rect x="1.8" y="3.5" width="16.4" height="13" rx="3.5" stroke="#E2540F" stroke-width="1.9"/><path d="M2.5 13.5l4.2-4 3.3 3 2.8-2.4 4.7 4.3" stroke="#E2540F" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round"/><circle cx="7" cy="7.6" r="1.5" fill="#E2540F"/></svg>
             SUBIR
           </button>
+          <button class="pbtn pbtn-alt pbtn-wide" id="btnProducts">📦 MIS PRODUCTOS <span id="btnProdN"></span></button>
         </div>
         <div class="photo-loading" id="photoLoading" hidden>
-          <div class="spinner"></div><span>Analizando tu comida…</span>
+          <div class="spinner"></div><span id="photoLoadingTxt">Analizando tu comida…</span>
         </div>
       </section>
 
@@ -126,7 +127,7 @@
           <button class="add-btn" id="addMealBtn">+ Agregar</button>
         </div>
         <div id="mealList"></div>
-        <div class="empty" id="mealEmpty">Aún no registras comidas.<br>Usa la foto, <b>+ Agregar</b> o pídeselo al bot.</div>
+        <div class="empty" id="mealEmpty">Aún no registras comidas.<br>Pesa y escanea, usa <b>+ Agregar</b> o pídeselo al bot.</div>
       </section>
     </main>
 
@@ -294,8 +295,8 @@
 
   <div class="toast" id="toast" hidden></div>
 
-  <script src="knowledge.js?v=10"></script>
-  <script src="bot.js?v=10"></script>
-  <script src="app.js?v=10"></script>
+  <script src="knowledge.js?v=11"></script>
+  <script src="bot.js?v=11"></script>
+  <script src="app.js?v=11"></script>
 </body>
 </html>

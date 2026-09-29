@@ -14,6 +14,7 @@ const DEFAULT_STATE = {
   currentDate: null,
   apiKey: "",
   chat: [],
+  products: {},
 };
 
 const MACRO_META = {
@@ -47,6 +48,7 @@ const App = {
     this.state.weights ||= {};
     this.state.units ||= { weight: "kg", height: "cm" };
     this.state.heroStyle ||= "auto";
+    this.state.products ||= {};
     this.state.profile.ritmo ||= "0.5";
     const ayer = this.shiftKey(this.todayKey(), -1);
     for (const m of this.state.chat) m.d ||= ayer;
@@ -95,6 +97,47 @@ const App = {
     const i = this.currentDay().meals.findIndex((m) => m.id === id);
     return i === -1 ? null : this.deleteMealAt(i);
   },
+  /* productos escaneados: valores de la etiqueta por base_g gramos */
+  normName(s) { return String(s || "").toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9 ]/g, " ").replace(/\s+/g, " ").trim(); },
+  saveProduct(p) {
+    const name = String(p.name || "Producto").trim().slice(0, 50) || "Producto";
+    const id = this.normName(name).replace(/ /g, "-") || `p${Date.now()}`;
+    if (p.id && p.id !== id) delete this.state.products[p.id]; // renombrado
+    const prod = {
+      id, name, base_g: Math.max(1, +p.base_g || 100),
+      kcal: Math.max(0, +p.kcal || 0), protein: Math.max(0, +p.protein || 0),
+      carbs: Math.max(0, +p.carbs || 0), fat: Math.max(0, +p.fat || 0), used: Date.now(),
+    };
+    this.state.products[id] = prod;
+    this.save();
+    return prod;
+  },
+  deleteProduct(id) { delete this.state.products[id]; this.save(); },
+  productList() { return Object.values(this.state.products).sort((a, b) => b.used - a.used); },
+  findProduct(text) {
+    const t = ` ${this.normName(text)} `;
+    let best = null, bestScore = 0;
+    for (const p of this.productList()) {
+      const n = this.normName(p.name);
+      if (n && t.includes(` ${n} `)) return p;
+      const words = n.split(" ").filter((w) => w.length >= 3);
+      if (!words.length) continue;
+      const score = words.filter((w) => t.includes(w)).length / words.length;
+      if (score > bestScore) { best = p; bestScore = score; }
+    }
+    return bestScore >= 0.5 ? best : null;
+  },
+  portion(p, grams) {
+    const f = (+grams || 0) / p.base_g;
+    return { kcal: Math.round(p.kcal * f), protein: Math.round(p.protein * f), carbs: Math.round(p.carbs * f), fat: Math.round(p.fat * f) };
+  },
+  logProduct(p, grams) {
+    grams = Math.round(+grams * 10) / 10;
+    const stored = this.state.products[p.id];
+    if (stored) { stored.used = Date.now(); }
+    return this.addMeal({ name: `${p.name} · ${grams} g`.slice(0, 60), ...this.portion(p, grams) });
+  },
+
   setGoal(field, value) { this.state.goals[field] = value; this.save(); renderAll(); },
   setDate(key) { this.state.currentDate = key; this.save(); renderAll(); },
   logWeight(kg, key = this.state.currentDate) {
@@ -675,6 +718,7 @@ function scrollChatToEnd() {
 /* solo re-dibuja la vista visible: mantiene la app fluida */
 function renderAll() {
   renderHoy();
+  renderProductsBtn();
   if ($("view-log").classList.contains("view-active")) renderLog();
 }
 
@@ -805,36 +849,149 @@ function weightSheet() {
     });
 }
 
-/* ---------- hoja: comentario de la foto ---------- */
+/* ---------- hoja: foto → gramos de báscula + tipo de foto ---------- */
 const PHOTO_CHIPS = ["porción grande", "porción pequeña", "sin salsa", "integral", "compartido", "con aceite"];
 function photoSheet(file) {
+  let mode = "label";
   openSheet(`
     <div class="sh-head">
-      <div class="sh-icon">🥗<div class="beam"></div></div>
-      <div><div class="sh-title">¿Algo que deba saber?</div>
-      <div class="sh-sub">Un comentario opcional afina el cálculo de macros.</div></div>
+      <div class="sh-icon">⚖️<div class="beam"></div></div>
+      <div><div class="sh-title">¿Cuánto marcó la báscula?</div>
+      <div class="sh-sub">Tara el plato, pesa la comida y escribe los gramos.</div></div>
     </div>
-    <textarea class="sh-ta" id="fpNote" placeholder="porción grande, sin salsa…"></textarea>
-    <div class="sh-chips" id="fpChips">${PHOTO_CHIPS.map((c) => `<button class="sh-chip">${c}</button>`).join("")}</div>
+    <div class="seg" id="fpSeg">
+      <button class="seg-b on" data-m="label">🏷️ Etiqueta nutricional</button>
+      <button class="seg-b" data-m="plate">🍲 Plato preparado</button>
+    </div>
+    <label class="pbox big"><span class="pbox-k">GRAMOS QUE VAS A COMER <i id="fpReq">(obligatorio)</i></span>
+      <input class="pbox-v" id="fpGrams" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></label>
+    <div id="fpPlate" hidden>
+      <textarea class="sh-ta" id="fpNote" placeholder="arroz con pollo, sin salsa…"></textarea>
+      <div class="sh-chips" id="fpChips">${PHOTO_CHIPS.map((c) => `<button class="sh-chip">${c}</button>`).join("")}</div>
+    </div>
+    <div class="sh-sub" id="fpHint">Leo los valores de la etiqueta y calculo exacto con tus gramos. El producto queda guardado: la próxima vez solo pones el peso.</div>
     <div class="sh-btns">
-      <button class="sh-btn" id="fpSkip">Omitir</button>
+      <button class="sh-btn" id="fpCancel">Cancelar</button>
       <button class="sh-btn primary" id="fpGo">
         <svg width="15" height="15" viewBox="0 0 16 16"><path d="M8 0l1.8 6.2L16 8l-6.2 1.8L8 16l-1.8-6.2L0 8l6.2-1.8Z" fill="#fff"/></svg>ANALIZAR
       </button>
     </div>`,
     (box) => {
-      const ta = box.querySelector("#fpNote");
+      const ta = box.querySelector("#fpNote"), gIn = box.querySelector("#fpGrams");
+      gIn.focus();
+      box.querySelector("#fpSeg").onclick = (e) => {
+        const b = e.target.closest(".seg-b");
+        if (!b) return;
+        mode = b.dataset.m;
+        box.querySelectorAll(".seg-b").forEach((x) => x.classList.toggle("on", x === b));
+        box.querySelector("#fpPlate").hidden = mode !== "plate";
+        box.querySelector("#fpReq").textContent = mode === "label" ? "(obligatorio)" : "(opcional)";
+        box.querySelector("#fpHint").textContent = mode === "label"
+          ? "Leo los valores de la etiqueta y calculo exacto con tus gramos. El producto queda guardado: la próxima vez solo pones el peso."
+          : "Sin etiqueta la IA estima la composición del plato; con los gramos la estimación es mucho más precisa.";
+      };
       box.querySelector("#fpChips").onclick = (e) => {
         const b = e.target.closest(".sh-chip");
         if (!b) return;
         b.classList.toggle("on");
-        const on = [...box.querySelectorAll(".sh-chip.on")].map((x) => x.textContent);
-        ta.value = on.join(", ");
+        ta.value = [...box.querySelectorAll(".sh-chip.on")].map((x) => x.textContent).join(", ");
       };
-      const go = () => { const n = ta.value.trim(); closeSheet(); runPhotoAnalysis(file, n); };
-      box.querySelector("#fpSkip").onclick = () => { closeSheet(); runPhotoAnalysis(file, ""); };
-      box.querySelector("#fpGo").onclick = go;
+      box.querySelector("#fpCancel").onclick = () => { closeSheet(); resetPhotoInputs(); };
+      box.querySelector("#fpGo").onclick = () => {
+        const grams = +gIn.value || 0;
+        if (mode === "label" && grams <= 0) { toast("Escribe los gramos de la báscula ⚖️"); gIn.focus(); return; }
+        closeSheet();
+        if (mode === "label") runLabelScan(file, grams);
+        else runPhotoAnalysis(file, ta.value.trim(), grams);
+      };
     });
+}
+
+/* ---------- hoja: confirmar etiqueta / pesar producto guardado ---------- */
+function productSheet(prod, grams = "", { scanned = false, note = "" } = {}) {
+  const p = { name: "", base_g: 100, kcal: "", protein: "", carbs: "", fat: "", ...prod };
+  const saved = !!(p.id && App.state.products[p.id]);
+  openSheet(`
+    <div class="sh-head">
+      <div class="sh-icon">🏷️</div>
+      <div><div class="sh-title">${scanned ? "Revisa la etiqueta" : esc(p.name)}</div>
+      <div class="sh-sub">${scanned ? "Esto es lo que leí. Si algo no cuadra con la etiqueta, corrígelo." : "Pon los gramos que marcó la báscula."}</div></div>
+    </div>
+    ${note ? `<div class="sh-warn">⚠️ ${esc(note)}</div>` : ""}
+    <label class="pbox big"><span class="pbox-k">GRAMOS QUE VAS A COMER</span>
+      <input class="pbox-v" id="psGrams" type="number" inputmode="decimal" min="0" step="any" value="${grams}" placeholder="0"></label>
+    <div class="sh-result" id="psResult"></div>
+    <details class="sh-det" ${scanned ? "open" : ""}>
+      <summary>Datos de la etiqueta</summary>
+      <div class="sh-form">
+        <label class="pbox wide"><span class="pbox-k">PRODUCTO</span><input class="pbox-v" id="psName" type="text" value="${esc(p.name)}" placeholder="Avena Quaker"></label>
+        <label class="pbox wide"><span class="pbox-k">VALORES POR (G)</span><input class="pbox-v" id="psBase" type="number" inputmode="decimal" min="1" step="any" value="${p.base_g}"></label>
+        <label class="pbox"><span class="pbox-k">CALORÍAS</span><input class="pbox-v" id="psKcal" type="number" inputmode="decimal" min="0" step="any" value="${p.kcal}"></label>
+        <label class="pbox"><span class="pbox-k">PROTEÍNA (G)</span><input class="pbox-v" id="psProt" type="number" inputmode="decimal" min="0" step="any" value="${p.protein}"></label>
+        <label class="pbox"><span class="pbox-k">CARBOS (G)</span><input class="pbox-v" id="psCarb" type="number" inputmode="decimal" min="0" step="any" value="${p.carbs}"></label>
+        <label class="pbox"><span class="pbox-k">GRASA (G)</span><input class="pbox-v" id="psFat" type="number" inputmode="decimal" min="0" step="any" value="${p.fat}"></label>
+      </div>
+      ${saved ? `<button class="sh-link" id="psDel">Borrar producto guardado</button>` : ""}
+    </details>
+    <div class="sh-btns"><button class="sh-btn" id="psCancel">Cancelar</button><button class="sh-btn primary" id="psSave">REGISTRAR</button></div>`,
+    (box) => {
+      const q = (id) => box.querySelector(id);
+      const read = () => ({
+        id: p.id, name: q("#psName").value.trim() || "Producto", base_g: +q("#psBase").value || 0,
+        kcal: +q("#psKcal").value || 0, protein: +q("#psProt").value || 0, carbs: +q("#psCarb").value || 0, fat: +q("#psFat").value || 0,
+      });
+      const paint = () => {
+        const d = read(), g = +q("#psGrams").value || 0;
+        if (!g || !d.base_g) { q("#psResult").innerHTML = `<span class="muted">Escribe los gramos para ver los macros</span>`; return; }
+        const m = App.portion(d, g);
+        q("#psResult").innerHTML = `<b>${m.kcal} kcal</b><span>P ${m.protein}g</span><span>C ${m.carbs}g</span><span>G ${m.fat}g</span>`;
+      };
+      box.addEventListener("input", paint);
+      paint();
+      if (!grams) q("#psGrams").focus();
+      q("#psCancel").onclick = closeSheet;
+      if (saved) q("#psDel").onclick = () => { App.deleteProduct(p.id); renderProductsBtn(); productsSheet(); toast("Producto borrado 🗑️"); };
+      q("#psSave").onclick = () => {
+        const d = read(), g = +q("#psGrams").value || 0;
+        if (g <= 0) { toast("Escribe los gramos ⚖️"); q("#psGrams").focus(); return; }
+        if (d.base_g <= 0) { toast("Falta «valores por (g)» ⚠️"); return; }
+        const prodSaved = App.saveProduct(d);
+        const meal = App.logProduct(prodSaved, g);
+        pushChat("action", `⚖️ Registré «${meal.name}» — ${meal.kcal} kcal · P ${meal.protein}g · C ${meal.carbs}g · G ${meal.fat}g`);
+        closeSheet();
+        toast(`+${meal.kcal} kcal registradas ⚖️`);
+      };
+    });
+}
+
+/* ---------- hoja: mis productos ---------- */
+function productsSheet() {
+  const list = App.productList();
+  openSheet(`
+    <div class="sh-head">
+      <div class="sh-icon">📦</div>
+      <div><div class="sh-title">Mis productos</div>
+      <div class="sh-sub">Etiquetas que ya escaneaste. Toca uno y pon los gramos.</div></div>
+    </div>
+    ${list.length ? `<div class="prod-list">${list.map((p) => `
+      <button class="prod-row" data-id="${esc(p.id)}">
+        <span class="prod-name">${esc(p.name)}</span>
+        <span class="prod-meta">${p.kcal} kcal · P${p.protein} C${p.carbs} G${p.fat} <i>/ ${p.base_g} g</i></span>
+      </button>`).join("")}</div>`
+      : `<div class="empty">Aún no guardas productos.<br>Toma foto de una etiqueta con <b>TOMAR</b>.</div>`}
+    <div class="sh-btns"><button class="sh-btn" id="plClose">Cerrar</button><button class="sh-btn primary" id="plNew">+ MANUAL</button></div>`,
+    (box) => {
+      box.querySelector("#plClose").onclick = closeSheet;
+      box.querySelector("#plNew").onclick = () => productSheet({}, "", { scanned: true });
+      box.querySelectorAll(".prod-row").forEach((b) => {
+        b.onclick = () => productSheet(App.state.products[b.dataset.id]);
+      });
+    });
+}
+
+function renderProductsBtn() {
+  const n = Object.keys(App.state.products).length;
+  $("btnProdN").textContent = n ? `(${n})` : "";
 }
 
 /* ---------- hoja: API key ---------- */
@@ -923,11 +1080,17 @@ function handlePhoto(file) {
   photoSheet(file);
 }
 
-async function runPhotoAnalysis(file, note) {
-  $("photoInner").hidden = true; $("photoBtns").hidden = true; $("photoLoading").hidden = false;
+function photoLoading(on, label = "Analizando tu comida…") {
+  $("photoInner").hidden = on; $("photoBtns").hidden = on; $("photoLoading").hidden = !on;
+  $("photoLoadingTxt").textContent = label;
+}
+function resetPhotoInputs() { $("photoInputCam").value = ""; $("photoInputGal").value = ""; }
+
+async function runPhotoAnalysis(file, note, grams = 0) {
+  photoLoading(true);
   try {
     const b64 = await resizeImage(file);
-    const { text, actions } = await analyzeFoodPhoto(b64, note);
+    const { text, actions } = await analyzeFoodPhoto(b64, note, grams);
     for (const a of actions) pushChat("action", a);
     if (text) pushChat("bot", text);
     if (actions.length) { toast("¡Comida registrada desde la foto! 📸"); document.querySelector(".tab-glow").classList.add("on"); }
@@ -935,8 +1098,26 @@ async function runPhotoAnalysis(file, note) {
   } catch (err) {
     toast(`⚠️ ${err.message}`);
   } finally {
-    $("photoInner").hidden = false; $("photoBtns").hidden = false; $("photoLoading").hidden = true;
-    $("photoInputCam").value = ""; $("photoInputGal").value = "";
+    photoLoading(false); resetPhotoInputs();
+  }
+}
+
+async function runLabelScan(file, grams) {
+  photoLoading(true, "Leyendo la etiqueta…");
+  try {
+    // más resolución: los números de la tabla son pequeños
+    const b64 = await resizeImage(file, 1568);
+    const d = await readNutritionLabel(b64);
+    if (!d.readable) {
+      toast("No pude leer la etiqueta 😅 Intenta de más cerca y con luz");
+      return;
+    }
+    const existing = App.state.products[App.normName(d.name).replace(/ /g, "-")];
+    productSheet({ ...d, id: existing?.id }, grams, { scanned: true, note: d.note });
+  } catch (err) {
+    toast(`⚠️ ${err.message}`);
+  } finally {
+    photoLoading(false); resetPhotoInputs();
   }
 }
 
@@ -984,6 +1165,8 @@ function bindEvents() {
   $("btnGal").onclick = (e) => { e.stopPropagation(); $("photoInputGal").click(); };
   $("photoInputCam").onchange = (e) => e.target.files[0] && handlePhoto(e.target.files[0]);
   $("photoInputGal").onchange = (e) => e.target.files[0] && handlePhoto(e.target.files[0]);
+  $("btnProducts").onclick = (e) => { e.stopPropagation(); productsSheet(); };
+  renderProductsBtn();
 
   $("chatForm").onsubmit = (e) => { e.preventDefault(); sendToBot($("chatText").value); $("chatText").value = ""; };
   $("chatChips").onclick = (e) => { const q = e.target.closest(".chip")?.dataset.q; if (q) sendToBot(q); };

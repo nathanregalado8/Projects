@@ -10,10 +10,19 @@ La app original tenía una sola pantalla (subir foto → analizar). Ahora es una
 
 | Pestaña | Qué hace |
 |---|---|
-| **☀️ Hoy** | Anillo animado de calorías, barras de macros (proteína/carbos/grasa), contador de agua, foto de comida con análisis por IA y lista de comidas editable |
+| **☀️ Hoy** | Anillo animado de calorías, barras de macros (proteína/carbos/grasa), **pesa y escanea** (báscula + foto de la etiqueta), productos guardados y lista de comidas editable |
 | **📈 Log** | Gráfica de los últimos 7 días con línea de meta + historial de días registrados |
 | **🤖 Bot** | Chat con JimmiteoBot: puede **editar la app por ti** (registrar comidas, cambiar metas, cambiar fechas, sumar agua) y recomienda **libros y videos reales** de salud con fuentes verificadas |
 | **⚙️ Ajustes** | Perfil con cálculo de gasto energético (Mifflin-St Jeor), metas editables, API key, exportar/importar datos |
+
+## ⚖️ Pesa y escanea
+
+1. Pesa la comida en la báscula (tara el plato primero).
+2. **TOMAR** → elige *Etiqueta nutricional* → escribe los gramos → foto de la tabla *Nutrition Facts*.
+3. La IA **lee** los valores de la etiqueta (no los estima) y la app hace la cuenta: `valor_etiqueta × gramos ÷ porción`. Revisas/corriges y registras.
+4. El producto queda en **📦 Mis productos**: la próxima vez solo tocas el producto y pones los gramos — sin foto, sin IA. En el chat también sirve: *«150 g de avena quaker»*.
+
+Para comida sin etiqueta usa *Plato preparado*: los gramos hacen que la estimación por foto sea mucho más precisa.
 
 ## 🧠 El bot
 

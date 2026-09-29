@@ -27,6 +27,18 @@ const BOT_TOOLS = [
     },
   },
   {
+    name: "log_product",
+    description: "Registra una porción PESADA de un producto guardado (escaneado antes de su etiqueta). La app calcula los macros exactos a partir de la etiqueta y los gramos. Úsala siempre que el usuario diga los gramos de algo que está en la lista de productos guardados.",
+    input_schema: {
+      type: "object",
+      properties: {
+        product: { type: "string", description: "Nombre del producto tal como aparece en la lista de productos guardados" },
+        grams: { type: "number", description: "Gramos (o ml) pesados en la báscula" },
+      },
+      required: ["product", "grams"],
+    },
+  },
+  {
     name: "delete_meal",
     description: "Elimina una comida del día actual. index es la posición (0 = primera). Usa -1 para eliminar la última.",
     input_schema: {
@@ -75,6 +87,26 @@ const BOT_TOOLS = [
   },
 ];
 
+/* ---------- Lectura de etiqueta nutricional (solo para fotos de etiqueta) ---------- */
+const LABEL_TOOL = {
+  name: "read_label",
+  description: "Devuelve los datos leídos de la tabla de información nutricional de la foto.",
+  input_schema: {
+    type: "object",
+    properties: {
+      readable: { type: "boolean", description: "false si la foto no es una tabla nutricional o no se leen las calorías y macros" },
+      name: { type: "string", description: "Nombre corto del producto (marca + producto si se ve), ej. 'Avena Quaker'" },
+      base_g: { type: "number", description: "Gramos (o ml) a los que corresponden los valores. Si la etiqueta tiene columna por 100 g/100 ml, usa esa (100). Si no, el tamaño de porción EN GRAMOS." },
+      kcal: { type: "number", description: "Calorías para base_g. Si solo aparece en kJ, divide entre 4.184" },
+      protein: { type: "number", description: "Proteína (g) para base_g" },
+      carbs: { type: "number", description: "Carbohidratos totales (g) para base_g" },
+      fat: { type: "number", description: "Grasa total (g) para base_g" },
+      note: { type: "string", description: "Aviso breve si algo fue dudoso o ilegible; vacío si todo se leyó bien" },
+    },
+    required: ["readable", "name", "base_g", "kcal", "protein", "carbs", "fat"],
+  },
+};
+
 /* ---------- Ejecutor de acciones (compartido por modo local e IA) ---------- */
 const GOAL_LABEL = { kcal: "calorías", protein: "proteína", carbs: "carbos", fat: "grasa" };
 
@@ -89,6 +121,14 @@ function runBotAction(name, input) {
         fat: Math.max(0, Math.round(+input.fat || 0)),
       });
       return `✅ Registré «${meal.name}» — ${meal.kcal} kcal · P ${meal.protein}g · C ${meal.carbs}g · G ${meal.fat}g`;
+    }
+    case "log_product": {
+      const prod = App.findProduct(input.product || "");
+      const grams = +input.grams || 0;
+      if (!prod) return `No tengo «${input.product}» en productos guardados. Pídele al usuario que escanee su etiqueta.`;
+      if (grams <= 0 || grams > 5000) return "Esos gramos no parecen válidos.";
+      const meal = App.logProduct(prod, grams);
+      return `⚖️ Registré «${meal.name}» — ${meal.kcal} kcal · P ${meal.protein}g · C ${meal.carbs}g · G ${meal.fat}g`;
     }
     case "delete_meal": {
       const removed = App.deleteMealAt(+input.index);
@@ -137,6 +177,8 @@ function stateSummary() {
   ].filter(Boolean).join(", ");
   const meals = App.currentDay().meals.map((m, i) => `${i}. ${m.name} (${m.kcal} kcal, P${m.protein} C${m.carbs} G${m.fat})`).join("\n") || "(sin comidas)";
   const lastW = App.latestWeight();
+  const prods = App.productList().slice(0, 40)
+    .map((p) => `- ${p.name}: por ${p.base_g} g → ${p.kcal} kcal, P${p.protein} C${p.carbs} G${p.fat}`).join("\n") || "(ninguno)";
   return [
     `Fecha activa: ${s.currentDate} (hoy es ${App.todayKey()})`,
     `Perfil del usuario: ${perfil}`,
@@ -144,6 +186,7 @@ function stateSummary() {
     `Metas diarias: ${g.kcal} kcal · proteína ${g.protein}g · carbos ${g.carbs}g · grasa ${g.fat}g`,
     `Consumido en la fecha activa: ${t.kcal} kcal · P ${t.protein}g · C ${t.carbs}g · G ${t.fat}g`,
     `Comidas de la fecha activa:\n${meals}`,
+    `Productos guardados (etiquetas escaneadas):\n${prods}`,
   ].join("\n");
 }
 
@@ -154,6 +197,11 @@ function systemPrompt() {
   return `Eres JimmiteoBot, el coach de nutrición y salud dentro de la app JimmiteoBot. Hablas español, eres cercano, motivador y breve (2-5 frases, usa emojis con moderación).
 
 Puedes EDITAR la app con tus herramientas: registrar/eliminar comidas, registrar el peso corporal, cambiar metas, calcular macros automáticamente desde el perfil y cambiar la fecha activa. Úsalas siempre que el usuario lo pida, sin pedir confirmación para acciones simples. Si pregunta cuántas calorías o macros debería comer, usa calculate_macros.
+
+PESO DE LA COMIDA (el usuario usa báscula de cocina):
+- Si da gramos de un producto guardado, usa log_product: la app hace la cuenta exacta con la etiqueta. No calcules tú.
+- Si da gramos de algo que NO está guardado, estima con valores por 100 g de USDA, multiplica por los gramos, regístralo con add_meal (pon los gramos en el nombre, ej. "Arroz blanco cocido · 180 g") y aclara que es estimado; sugiere escanear la etiqueta si es un producto empacado.
+- Distingue gramos de comida (g) del peso corporal (kg/lb): "150 g de avena" nunca es peso corporal.
 
 REGLAS DE VERACIDAD (muy importante):
 - Solo recomienda libros y videos de esta lista verificada. Nunca inventes títulos, autores, estudios ni cifras.
@@ -231,12 +279,12 @@ async function askClaude(userText, onAction) {
 }
 
 /* ---------- Análisis de foto (visión + tool use forzado) ---------- */
-async function analyzeFoodPhoto(base64jpeg, note = "") {
+async function analyzeFoodPhoto(base64jpeg, note = "", grams = 0) {
   const messages = [{
     role: "user",
     content: [
       { type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64jpeg } },
-      { type: "text", text: "Analiza esta foto de comida. Identifica el plato y estima calorías y macros realistas de la porción visible. Luego regístrala con la herramienta add_meal. Si la imagen no es comida, dilo y no registres nada." + (note ? `\n\nDetalles del usuario sobre la comida (tenlos muy en cuenta para las cantidades): ${note}` : "") },
+      { type: "text", text: "Analiza esta foto de comida. Identifica el plato y estima calorías y macros realistas de la porción visible. Luego regístrala con la herramienta add_meal. Si la imagen no es comida, dilo y no registres nada." + (grams ? `\n\nEl usuario pesó la comida en báscula: ${grams} g netos. Usa ese peso: estima la composición del plato, sus kcal/macros por 100 g, y multiplica por ${grams / 100}. Pon los gramos en el nombre (ej. "Arroz con pollo · ${grams} g").` : "") + (note ? `\n\nDetalles del usuario sobre la comida (tenlos muy en cuenta para las cantidades): ${note}` : "") },
     ],
   }];
 
@@ -252,6 +300,21 @@ async function analyzeFoodPhoto(base64jpeg, note = "") {
   return { text: text.trim(), actions: results };
 }
 
+/* ---------- Foto de etiqueta nutricional → datos por base_g ---------- */
+async function readNutritionLabel(base64jpeg) {
+  const messages = [{
+    role: "user",
+    content: [
+      { type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64jpeg } },
+      { type: "text", text: "Esta es la foto de una tabla de información nutricional (Nutrition Facts). Lee los valores EXACTOS que aparecen, no estimes. Prefiere la columna por 100 g si existe; si no, usa el tamaño de porción en gramos. Devuélvelos con read_label." },
+    ],
+  }];
+  const response = await claudeRequest(messages, { tools: [LABEL_TOOL], tool_choice: { type: "tool", name: "read_label" } });
+  const block = response.content.find((b) => b.type === "tool_use" && b.name === "read_label");
+  if (!block) throw new Error("No pude leer la etiqueta");
+  return block.input;
+}
+
 /* ==========================================================
    MODO LOCAL — comandos en español sin API key
    ========================================================== */
@@ -264,7 +327,7 @@ function localBot(text) {
   const reply = (text, actions = []) => ({ text, actions });
 
   // Registrar peso: "peso 78.5", "hoy pesé 172 libras"
-  const wMatch = t.match(/(?:^|\s)(?:peso|pesé|pese|me pesé|me pese|marqué|marque)\s+(?:es\s+|de\s+)?(\d+(?:[.,]\d+)?)\s*(lb|libras?|kg|kilos?)?/);
+  const wMatch = t.match(/(?:^|\s)(?:peso|pesé|pese|me pesé|me pese|marqué|marque)\s+(?:es\s+|de\s+)?(\d+(?:[.,]\d+)?)(?![\d.,]|\s*(?:g|gr|grs|gramos?|ml)\b)\s*(lb|libras?|kg|kilos?)?/);
   if (wMatch) {
     let v = parseFloat(wMatch[1].replace(",", "."));
     const saidLb = /lb|libra/.test(wMatch[2] || "");
@@ -327,6 +390,17 @@ function localBot(text) {
     return reply(`💡 ${tip.text}\n\n📖 Fuente: ${tip.source}`);
   }
 
+  // Porción pesada: "150 g de avena", "comí 200 gramos de yogurt griego"
+  const gMatch = t.match(/(\d+(?:[.,]\d+)?)\s*(?:g|gr|grs|gramos?|ml)\b\s*(?:de\s+)?(.+)/);
+  if (gMatch) {
+    const grams = parseFloat(gMatch[1].replace(",", "."));
+    const prod = App.findProduct(gMatch[2]);
+    if (prod && grams > 0 && grams <= 5000) {
+      return reply("¡Anotado con la etiqueta! ⚖️", [runBotAction("log_product", { product: prod.name, grams })]);
+    }
+    return reply(`No tengo «${gMatch[2].trim()}» guardado 🏷️. Escanea su etiqueta una vez (Hoy → TOMAR → Etiqueta) y a partir de ahí solo me dices los gramos.`);
+  }
+
   // Registrar comida: "comí arroz con pollo", "agrega un huevo"
   if (/(^|\s)(comí|comi|desayun|almorc|almuerzo|cen[eé]|cena|agrega|añade|registra)/.test(t)) {
     const food = findFood(t);
@@ -371,6 +445,7 @@ function localBot(text) {
   // Fallback
   return reply(
     "Estoy en modo local 🤖 (sin API key). Puedo hacer esto:\n" +
+    "• «150 g de avena» → uso la etiqueta que escaneaste\n" +
     "• «Comí arroz con pollo» → registro la comida\n" +
     "• «Calcula mis macros» → metas según tu perfil\n" +
     "• «Cambia mi meta de proteína a 150»\n" +
