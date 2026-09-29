@@ -28,11 +28,11 @@ const BOT_TOOLS = [
   },
   {
     name: "log_product",
-    description: "Registra una porción PESADA de un producto guardado (escaneado antes de su etiqueta). La app calcula los macros exactos a partir de la etiqueta y los gramos. Úsala siempre que el usuario diga los gramos de algo que está en la lista de productos guardados.",
+    description: "Registra una porción PESADA de un producto guardado o de un alimento básico USDA ya cocido. La app calcula los macros exactos a partir de la etiqueta/tabla y los gramos. Úsala siempre que el usuario diga los gramos de algo que está en cualquiera de esas dos listas.",
     input_schema: {
       type: "object",
       properties: {
-        product: { type: "string", description: "Nombre del producto tal como aparece en la lista de productos guardados" },
+        product: { type: "string", description: "Nombre tal como aparece en productos guardados o en básicos USDA" },
         grams: { type: "number", description: "Gramos (o ml) pesados en la báscula" },
         cooked: { type: "boolean", description: "true si lo pesó ya cocinado, false si crudo/seco o tal como viene. Omítelo si el usuario no lo dice (se usa lo último que usó con ese producto)." },
       },
@@ -229,6 +229,7 @@ function stateSummary() {
     `Consumido en la fecha activa: ${t.kcal} kcal · P ${t.protein}g · C ${t.carbs}g · G ${t.fat}g`,
     `Comidas de la fecha activa:\n${meals}`,
     `Productos guardados (etiquetas escaneadas):\n${prods}`,
+    `Básicos USDA ya cocidos (por 100 g, usa log_product): ${COOKED_FOODS.map((f) => f.name).join(", ")}`,
   ].join("\n");
 }
 
@@ -243,7 +244,7 @@ Puedes EDITAR la app con tus herramientas: registrar/eliminar comidas, registrar
 PESO DE LA COMIDA (el usuario usa báscula de cocina):
 - Si da gramos de un producto guardado, usa log_product: la app hace la cuenta exacta con la etiqueta. No calcules tú. Si dice "cocido/cocinado" pasa cooked true; si dice "crudo/seco" pasa false.
 - El usuario normalmente pesa la comida YA COCINADA. Las etiquetas de arroz, pasta, avena, frijoles y carnes crudas son para el producto crudo/seco: nunca apliques la etiqueta cruda directo a gramos cocidos.
-- Si da gramos de algo que NO está guardado, estima con valores por 100 g de USDA, multiplica por los gramos, regístralo con add_meal (pon los gramos en el nombre, ej. "Arroz blanco cocido · 180 g") y aclara que es estimado; sugiere escanear la etiqueta si es un producto empacado.
+- Si da gramos de algo que NO está en ninguna lista, estima con valores por 100 g de USDA, multiplica por los gramos, regístralo con add_meal (pon los gramos en el nombre, ej. "Arroz blanco cocido · 180 g") y aclara que es estimado; sugiere escanear la etiqueta si es un producto empacado.
 - Distingue gramos de comida (g) del peso corporal (kg/lb): "150 g de avena" nunca es peso corporal.
 
 REGLAS DE VERACIDAD (muy importante):
@@ -467,7 +468,7 @@ function localBot(text) {
       const cooked = /cocid|cocin|hervid/.test(t) ? true : /crud|seco/.test(t) ? false : undefined;
       return reply("¡Anotado con la etiqueta! ⚖️", [runBotAction("log_product", { product: prod.name, grams, cooked })]);
     }
-    return reply(`No tengo «${gMatch[2].trim()}» guardado 🏷️. Escanea su etiqueta una vez (Hoy → TOMAR → Etiqueta) y a partir de ahí solo me dices los gramos.`);
+    return reply(`No tengo «${gMatch[2].trim()}» guardado 🏷️. Escanea su etiqueta una vez (Hoy → 🏷️ Etiqueta nueva) y a partir de ahí solo me dices los gramos.`);
   }
 
   // Registrar comida: "comí arroz con pollo", "agrega un huevo"

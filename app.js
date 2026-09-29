@@ -117,15 +117,21 @@ const App = {
   },
   deleteProduct(id) { delete this.state.products[id]; this.save(); },
   productList() { return Object.values(this.state.products).sort((a, b) => b.used - a.used); },
+  // básicos USDA que aún no están entre tus productos
+  basicList() { return COOKED_FOODS.filter((f) => !this.state.products[this.normName(f.name).replace(/ /g, "-")]); },
   findProduct(text) {
-    const t = ` ${this.normName(text)} `;
+    const STOP = new Set(["de", "del", "la", "el", "los", "las", "con", "sin", "en", "y", "o", "ya", "un", "una", "comi", "cocido", "cocida", "cocinado", "cocinada", "crudo", "cruda", "seco", "seca", "hoy", "agrega", "registra"]);
+    const words = (x) => this.normName(x).split(" ").filter((w) => w.length >= 3 && !STOP.has(w));
+    const t = ` ${this.normName(text)} `, q = words(text);
     let best = null, bestScore = 0;
-    for (const p of this.productList()) {
-      const n = this.normName(p.name);
+    for (const p of [...this.productList(), ...COOKED_FOODS]) {
+      const n = this.normName(p.name), pw = words(p.name);
       if (n && t.includes(` ${n} `)) return p;
-      const words = n.split(" ").filter((w) => w.length >= 3);
-      if (!words.length) continue;
-      const score = words.filter((w) => t.includes(w)).length / words.length;
+      if (!pw.length || !q.length) continue;
+      // cuánto del nombre aparece en el texto, y cuánto del texto aparece en el nombre
+      const byName = pw.filter((w) => t.includes(w)).length / pw.length;
+      const byText = q.filter((w) => n.includes(w)).length / q.length;
+      const score = Math.max(byName, byText) + byName * 0.01;
       if (score > bestScore) { best = p; bestScore = score; }
     }
     return bestScore >= 0.5 ? best : null;
@@ -727,7 +733,6 @@ function scrollChatToEnd() {
 /* solo re-dibuja la vista visible: mantiene la app fluida */
 function renderAll() {
   renderHoy();
-  renderProductsBtn();
   if ($("view-log").classList.contains("view-active")) renderLog();
 }
 
@@ -858,27 +863,19 @@ function weightSheet() {
     });
 }
 
-/* ---------- hoja: foto → gramos de báscula + tipo de foto ---------- */
-const PHOTO_CHIPS = ["porción grande", "porción pequeña", "sin salsa", "integral", "compartido", "con aceite"];
+/* ---------- hoja: foto de plato (comí fuera / plato mixto) ---------- */
+const PHOTO_CHIPS = ["porción grande", "porción pequeña", "frito", "con salsa", "con queso", "compartido"];
 function photoSheet(file) {
-  let mode = "label";
   openSheet(`
     <div class="sh-head">
-      <div class="sh-icon">⚖️<div class="beam"></div></div>
-      <div><div class="sh-title">¿Cuánto marcó la báscula?</div>
-      <div class="sh-sub">Tara el plato, pesa la comida (cocinada está bien) y escribe los gramos.</div></div>
+      <div class="sh-icon">📸<div class="beam"></div></div>
+      <div><div class="sh-title">Foto del plato</div>
+      <div class="sh-sub">Estimo 3 veces por separado y uso el valor del medio. Es una estimación: cuéntame lo que sepas.</div></div>
     </div>
-    <div class="seg" id="fpSeg">
-      <button class="seg-b on" data-m="label">🏷️ Etiqueta nutricional</button>
-      <button class="seg-b" data-m="plate">🍲 Plato preparado</button>
-    </div>
-    <label class="pbox big"><span class="pbox-k">GRAMOS QUE VAS A COMER <i id="fpReq">(obligatorio)</i></span>
-      <input class="pbox-v" id="fpGrams" type="number" inputmode="decimal" min="0" step="any" placeholder="0"></label>
-    <div id="fpPlate" hidden>
-      <textarea class="sh-ta" id="fpNote" placeholder="arroz con pollo, sin salsa…"></textarea>
-      <div class="sh-chips" id="fpChips">${PHOTO_CHIPS.map((c) => `<button class="sh-chip">${c}</button>`).join("")}</div>
-    </div>
-    <div class="sh-sub" id="fpHint">Leo la etiqueta 3 veces y comparo. Si la etiqueta es del producto crudo (arroz, pasta, carne) y lo pesaste cocinado, lo convierto. Queda guardado: la próxima vez solo pones el peso.</div>
+    <textarea class="sh-ta" id="fpNote" placeholder="tacos de pollo con guacamole, 3 unidades…"></textarea>
+    <div class="sh-chips" id="fpChips">${PHOTO_CHIPS.map((c) => `<button class="sh-chip">${c}</button>`).join("")}</div>
+    <label class="pbox big"><span class="pbox-k">GRAMOS <i>(opcional, si lo pesaste)</i></span>
+      <input class="pbox-v" id="fpGrams" type="number" inputmode="decimal" min="0" step="any" placeholder="—"></label>
     <div class="sh-btns">
       <button class="sh-btn" id="fpCancel">Cancelar</button>
       <button class="sh-btn primary" id="fpGo">
@@ -886,32 +883,20 @@ function photoSheet(file) {
       </button>
     </div>`,
     (box) => {
-      const ta = box.querySelector("#fpNote"), gIn = box.querySelector("#fpGrams");
-      gIn.focus();
-      box.querySelector("#fpSeg").onclick = (e) => {
-        const b = e.target.closest(".seg-b");
-        if (!b) return;
-        mode = b.dataset.m;
-        box.querySelectorAll(".seg-b").forEach((x) => x.classList.toggle("on", x === b));
-        box.querySelector("#fpPlate").hidden = mode !== "plate";
-        box.querySelector("#fpReq").textContent = mode === "label" ? "(obligatorio)" : "(opcional)";
-        box.querySelector("#fpHint").textContent = mode === "label"
-          ? "Leo la etiqueta 3 veces y comparo. Si la etiqueta es del producto crudo (arroz, pasta, carne) y lo pesaste cocinado, lo convierto. Queda guardado: la próxima vez solo pones el peso."
-          : "Sin etiqueta la IA estima el plato 3 veces por separado y uso el valor del medio. Con los gramos sale mucho más preciso.";
-      };
+      const ta = box.querySelector("#fpNote");
       box.querySelector("#fpChips").onclick = (e) => {
         const b = e.target.closest(".sh-chip");
         if (!b) return;
         b.classList.toggle("on");
-        ta.value = [...box.querySelectorAll(".sh-chip.on")].map((x) => x.textContent).join(", ");
+        const on = [...box.querySelectorAll(".sh-chip.on")].map((x) => x.textContent);
+        const free = ta.value.split(", ").filter((x) => x && !PHOTO_CHIPS.includes(x));
+        ta.value = [...free, ...on].join(", ");
       };
       box.querySelector("#fpCancel").onclick = () => { closeSheet(); resetPhotoInputs(); };
       box.querySelector("#fpGo").onclick = () => {
-        const grams = +gIn.value || 0;
-        if (mode === "label" && grams <= 0) { toast("Escribe los gramos de la báscula ⚖️"); gIn.focus(); return; }
+        const grams = +box.querySelector("#fpGrams").value || 0;
         closeSheet();
-        if (mode === "label") runLabelScan(file, grams);
-        else runPhotoAnalysis(file, ta.value.trim(), grams);
+        runPhotoAnalysis(file, ta.value.trim(), grams);
       };
     });
 }
@@ -936,9 +921,11 @@ function productSheet(prod, grams = "", { scanned = null } = {}) {
   }
   openSheet(`
     <div class="sh-head">
-      <div class="sh-icon">🏷️</div>
+      <div class="sh-icon">${p.builtin ? "🥔" : "🏷️"}</div>
       <div><div class="sh-title">${scanned ? "Revisa la etiqueta" : esc(p.name || "Producto manual")}</div>
-      <div class="sh-sub">${scanned ? "Compara estos números con la foto antes de registrar." : "Pon los gramos que marcó la báscula."}</div></div>
+      <div class="sh-sub">${scanned ? "Compara estos números con la foto antes de registrar."
+        : p.builtin ? "Valores USDA del alimento ya cocido, por 100 g. Pon los gramos de la báscula."
+        : "Pon los gramos que marcó la báscula."}</div></div>
     </div>
     ${check}
     <label class="pbox big"><span class="pbox-k">GRAMOS EN LA BÁSCULA</span>
@@ -954,7 +941,7 @@ function productSheet(prod, grams = "", { scanned = null } = {}) {
     </div>
     <div class="sh-result" id="psResult"></div>
     <details class="sh-det" ${scanned ? "open" : ""}>
-      <summary>Datos de la etiqueta</summary>
+      <summary>${p.builtin ? "Valores por 100 g (USDA)" : "Datos de la etiqueta"}</summary>
       <div class="sh-form">
         <label class="pbox wide"><span class="pbox-k">PRODUCTO</span><input class="pbox-v" id="psName" type="text" value="${esc(p.name)}" placeholder="Arroz Goya"></label>
         <label class="pbox wide${fl("base_g")}"><span class="pbox-k">VALORES POR (G)</span><input class="pbox-v" id="psBase" type="number" inputmode="decimal" min="1" step="any" value="${p.base_g}"></label>
@@ -1006,7 +993,7 @@ function productSheet(prod, grams = "", { scanned = null } = {}) {
       paint();
       if (!grams) q("#psGrams").focus();
       q("#psCancel").onclick = closeSheet;
-      if (saved) q("#psDel").onclick = () => { App.deleteProduct(p.id); renderProductsBtn(); productsSheet(); toast("Producto borrado 🗑️"); };
+      if (saved) q("#psDel").onclick = () => { App.deleteProduct(p.id); productsSheet(); toast("Producto borrado 🗑️"); };
       q("#psSave").onclick = () => {
         const d = read(), g = +q("#psGrams").value || 0;
         if (g <= 0) { toast("Escribe los gramos ⚖️"); q("#psGrams").focus(); return; }
@@ -1057,35 +1044,44 @@ function estimateSheet(e) {
     });
 }
 
-/* ---------- hoja: mis productos ---------- */
+/* ---------- hoja: pesar (tus productos + básicos USDA) ---------- */
 function productsSheet() {
-  const list = App.productList();
-  openSheet(`
-    <div class="sh-head">
-      <div class="sh-icon">📦</div>
-      <div><div class="sh-title">Mis productos</div>
-      <div class="sh-sub">Etiquetas que ya escaneaste. Toca uno y pon los gramos.</div></div>
-    </div>
-    ${list.length ? `<div class="prod-list">${list.map((p) => `
+  const row = (p) => `
       <button class="prod-row" data-id="${esc(p.id)}">
         <span class="prod-name">${esc(p.name)}</span>
-        <span class="prod-meta">${p.kcal} kcal · P${p.protein} C${p.carbs} G${p.fat} <i>/ ${p.base_g} g${p.ready_to_eat === false ? " crudo" : ""}</i></span>
-      </button>`).join("")}</div>`
-      : `<div class="empty">Aún no guardas productos.<br>Toma foto de una etiqueta con <b>TOMAR</b>.</div>`}
-    <div class="sh-btns"><button class="sh-btn" id="plClose">Cerrar</button><button class="sh-btn primary" id="plNew">+ MANUAL</button></div>`,
+        <span class="prod-meta">${p.kcal} kcal · P${p.protein} C${p.carbs} G${p.fat} <i>/ ${p.base_g} g${p.ready_to_eat === false ? " crudo" : p.builtin ? " cocido" : ""}</i></span>
+      </button>`;
+  openSheet(`
+    <div class="sh-head">
+      <div class="sh-icon">⚖️</div>
+      <div><div class="sh-title">¿Qué pesaste?</div>
+      <div class="sh-sub">Elige el alimento y pon los gramos de la báscula.</div></div>
+    </div>
+    <label class="pbox"><span class="pbox-k">BUSCAR</span><input class="pbox-v" id="plQ" type="search" placeholder="pollo, arroz, papa…"></label>
+    <div class="prod-list" id="plList"></div>
+    <div class="sh-btns"><button class="sh-btn" id="plClose">Cerrar</button><button class="sh-btn primary" id="plNew">+ ETIQUETA A MANO</button></div>`,
     (box) => {
+      const paint = () => {
+        const t = App.normName(box.querySelector("#plQ").value);
+        const hit = (p) => !t || App.normName(p.name).includes(t);
+        const mine = App.productList().filter(hit), basics = App.basicList().filter(hit);
+        box.querySelector("#plList").innerHTML =
+          (mine.length ? `<div class="prod-sec">Tus productos</div>${mine.map(row).join("")}` : "")
+          + (basics.length ? `<div class="prod-sec">Básicos ya cocidos · USDA por 100 g</div>${basics.map(row).join("")}` : "")
+          + (!mine.length && !basics.length ? `<div class="empty">No lo encuentro. Escanea su etiqueta o usa <b>+ ETIQUETA A MANO</b>.</div>` : "");
+      };
+      box.querySelector("#plQ").oninput = paint;
+      paint();
       box.querySelector("#plClose").onclick = closeSheet;
       box.querySelector("#plNew").onclick = () => productSheet({});
-      box.querySelectorAll(".prod-row").forEach((b) => {
-        b.onclick = () => productSheet(App.state.products[b.dataset.id]);
-      });
+      box.querySelector("#plList").onclick = (e) => {
+        const b = e.target.closest(".prod-row");
+        if (!b) return;
+        productSheet(App.state.products[b.dataset.id] || COOKED_FOODS.find((f) => f.id === b.dataset.id));
+      };
     });
 }
 
-function renderProductsBtn() {
-  const n = Object.keys(App.state.products).length;
-  $("btnProdN").textContent = n ? `(${n})` : "";
-}
 
 /* ---------- hoja: API key ---------- */
 function apiSheet() {
@@ -1164,20 +1160,22 @@ function resizeImage(file, maxSide = 1024) {
   });
 }
 
+let photoPurpose = "plate";
+function pickPhoto(purpose) {
+  if (!App.state.apiKey) { toast("Agrega tu API key en Ajustes para analizar fotos 🤖"); return; }
+  photoPurpose = purpose;
+  $("photoInput").click();
+}
 function handlePhoto(file) {
-  if (!App.state.apiKey) {
-    toast("Agrega tu API key en Ajustes para analizar fotos 🤖");
-    mealSheet();
-    return;
-  }
-  photoSheet(file);
+  if (photoPurpose === "label") runLabelScan(file, "");
+  else photoSheet(file);
 }
 
 function photoLoading(on, label = "Analizando tu comida…") {
   $("photoInner").hidden = on; $("photoBtns").hidden = on; $("photoLoading").hidden = !on;
   $("photoLoadingTxt").textContent = label;
 }
-function resetPhotoInputs() { $("photoInputCam").value = ""; $("photoInputGal").value = ""; }
+function resetPhotoInputs() { $("photoInput").value = ""; }
 
 async function runPhotoAnalysis(file, note, grams = 0) {
   photoLoading(true, "Estimando 3 veces…");
@@ -1254,12 +1252,10 @@ function bindEvents() {
     }
   };
 
-  $("btnCam").onclick = (e) => { e.stopPropagation(); $("photoInputCam").click(); };
-  $("btnGal").onclick = (e) => { e.stopPropagation(); $("photoInputGal").click(); };
-  $("photoInputCam").onchange = (e) => e.target.files[0] && handlePhoto(e.target.files[0]);
-  $("photoInputGal").onchange = (e) => e.target.files[0] && handlePhoto(e.target.files[0]);
-  $("btnProducts").onclick = (e) => { e.stopPropagation(); productsSheet(); };
-  renderProductsBtn();
+  $("btnWeigh").onclick = (e) => { e.stopPropagation(); productsSheet(); };
+  $("btnLabel").onclick = (e) => { e.stopPropagation(); pickPhoto("label"); };
+  $("btnPlate").onclick = (e) => { e.stopPropagation(); pickPhoto("plate"); };
+  $("photoInput").onchange = (e) => e.target.files[0] && handlePhoto(e.target.files[0]);
 
   $("chatForm").onsubmit = (e) => { e.preventDefault(); sendToBot($("chatText").value); $("chatText").value = ""; };
   $("chatChips").onclick = (e) => { const q = e.target.closest(".chip")?.dataset.q; if (q) sendToBot(q); };

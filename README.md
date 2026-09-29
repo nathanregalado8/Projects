@@ -15,15 +15,17 @@ La app original tenía una sola pantalla (subir foto → analizar). Ahora es una
 | **🤖 Bot** | Chat con JimmiteoBot: puede **editar la app por ti** (registrar comidas, cambiar metas, cambiar fechas, sumar agua) y recomienda **libros y videos reales** de salud con fuentes verificadas |
 | **⚙️ Ajustes** | Perfil con cálculo de gasto energético (Mifflin-St Jeor), metas editables, API key, exportar/importar datos |
 
-## ⚖️ Pesa y escanea
+## ⚖️ Pesa y registra
 
-1. Pesa la comida en la báscula (cocinada está bien; tara el plato primero).
-2. **TOMAR** → *Etiqueta nutricional* → escribe los gramos → foto de la tabla *Nutrition Facts*.
-3. **Triple verificación:** la IA lee la etiqueta **3 veces por separado**; la app usa la mediana, marca en rojo cualquier campo donde las lecturas no coincidan y revisa que `4·P + 4·C + 9·G ≈ kcal`.
-4. **Cocinado vs crudo:** si la etiqueta es del producto crudo/seco (arroz, pasta, avena, carne) y lo pesaste cocinado, convierte con el rendimiento (`gramos cocidos ÷ rendimiento = gramos crudos`). El rendimiento viene de tablas USDA y lo puedes calibrar con tu propio número.
-5. La cuenta la hace la app, no la IA. Se registra y el producto queda en **📦 Mis productos**: la próxima vez solo pones los gramos. En el chat: *«150 g de arroz goya cocido»*.
+Tres botones en **Hoy**, uno por caso:
 
-Para comida sin etiqueta usa *Plato preparado*: la IA estima **3 veces**, la app usa la mediana y te muestra el rango.
+| Botón | Para qué | Precisión |
+|---|---|---|
+| **⚖️ Pesar alimento** | Whole foods ya cocidos (pollo, papa, arroz, huevo…) con la tabla USDA por 100 g, o tus productos guardados. Eliges, pones gramos, registras. Sin IA. | La más alta |
+| **🏷️ Etiqueta nueva** | Producto empacado: la IA lee la etiqueta 3 veces, marca discrepancias y chequea `4P+4C+9G ≈ kcal`. Si la etiqueta es cruda y lo pesaste cocinado, convierte con el rendimiento USDA. Queda guardado. | Alta |
+| **📸 Foto del plato** | Comidas fuera o platos mixtos: 3 estimaciones, mediana y rango. | Estimación |
+
+En el chat también: *«150 g de pechuga de pollo»*, *«180 g de arroz goya cocido»*.
 
 ## 🧠 El bot
 
