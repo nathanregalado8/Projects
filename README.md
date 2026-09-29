@@ -17,12 +17,13 @@ La app original tenía una sola pantalla (subir foto → analizar). Ahora es una
 
 ## ⚖️ Pesa y escanea
 
-1. Pesa la comida en la báscula (tara el plato primero).
-2. **TOMAR** → elige *Etiqueta nutricional* → escribe los gramos → foto de la tabla *Nutrition Facts*.
-3. La IA **lee** los valores de la etiqueta (no los estima) y la app hace la cuenta: `valor_etiqueta × gramos ÷ porción`. Revisas/corriges y registras.
-4. El producto queda en **📦 Mis productos**: la próxima vez solo tocas el producto y pones los gramos — sin foto, sin IA. En el chat también sirve: *«150 g de avena quaker»*.
+1. Pesa la comida en la báscula (cocinada está bien; tara el plato primero).
+2. **TOMAR** → *Etiqueta nutricional* → escribe los gramos → foto de la tabla *Nutrition Facts*.
+3. **Triple verificación:** la IA lee la etiqueta **3 veces por separado**; la app usa la mediana, marca en rojo cualquier campo donde las lecturas no coincidan y revisa que `4·P + 4·C + 9·G ≈ kcal`.
+4. **Cocinado vs crudo:** si la etiqueta es del producto crudo/seco (arroz, pasta, avena, carne) y lo pesaste cocinado, convierte con el rendimiento (`gramos cocidos ÷ rendimiento = gramos crudos`). El rendimiento viene de tablas USDA y lo puedes calibrar con tu propio número.
+5. La cuenta la hace la app, no la IA. Se registra y el producto queda en **📦 Mis productos**: la próxima vez solo pones los gramos. En el chat: *«150 g de arroz goya cocido»*.
 
-Para comida sin etiqueta usa *Plato preparado*: los gramos hacen que la estimación por foto sea mucho más precisa.
+Para comida sin etiqueta usa *Plato preparado*: la IA estima **3 veces**, la app usa la mediana y te muestra el rango.
 
 ## 🧠 El bot
 

@@ -499,6 +499,19 @@ select.pbox-v { margin-left: -2px; }
 .sh-result b { font-family: "Sora", sans-serif; font-size: 18px; color: var(--orange-ink); }
 .sh-result .muted { font-weight: 500; color: var(--muted); }
 .sh-warn { padding: 10px 12px; border-radius: 14px; background: rgba(217,119,6,.1); color: #92400E; font-size: 12.5px; line-height: 1.4; }
+.sh-check { padding: 11px 13px; border-radius: 14px; font-size: 12.5px; line-height: 1.45; }
+.sh-check.ok { background: rgba(22,163,74,.1); color: #166534; }
+.sh-check.bad { background: rgba(225,29,72,.1); color: #9F1239; }
+.pbox.flag { border: 2px solid #E11D48; background: rgba(225,29,72,.05); }
+.pbox.chk { flex-direction: row; align-items: center; gap: 10px; font-size: 12.5px; color: var(--ink-2); }
+.pbox.chk input { width: 18px; height: 18px; accent-color: var(--orange); flex-shrink: 0; }
+#psCook { display: flex; flex-direction: column; gap: 10px; }
+#psCook[hidden] { display: none; }
+.pbox.yield { background: #fff; }
+.sh-result .wide { flex-basis: 100%; font-size: 12px; }
+.sh-result .bad { color: #E11D48; }
+.pbox-k i { color: var(--muted-2); }
+.sh-btn:disabled { opacity: .45; }
 .sh-det { display: flex; flex-direction: column; gap: 10px; }
 .sh-det summary { cursor: pointer; font-size: 12.5px; font-weight: 700; color: var(--ink-3); padding: 2px 0 10px; }
 .sh-link { align-self: flex-start; margin-top: 10px; font-size: 12.5px; font-weight: 700; color: #E11D48; }

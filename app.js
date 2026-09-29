@@ -107,7 +107,10 @@ const App = {
       id, name, base_g: Math.max(1, +p.base_g || 100),
       kcal: Math.max(0, +p.kcal || 0), protein: Math.max(0, +p.protein || 0),
       carbs: Math.max(0, +p.carbs || 0), fat: Math.max(0, +p.fat || 0), used: Date.now(),
+      ready_to_eat: p.ready_to_eat !== false, cooked_yield: Math.max(0.1, +p.cooked_yield || 1),
+      weighed: p.weighed === "cooked" ? "cooked" : "raw",
     };
+    if (prod.ready_to_eat) { prod.cooked_yield = 1; prod.weighed = "raw"; }
     this.state.products[id] = prod;
     this.save();
     return prod;
@@ -127,15 +130,21 @@ const App = {
     }
     return bestScore >= 0.5 ? best : null;
   },
-  portion(p, grams) {
-    const f = (+grams || 0) / p.base_g;
+  // gramos pesados → gramos equivalentes de la etiqueta (si se pesó cocido y la etiqueta es cruda: ÷ rendimiento)
+  labelGrams(p, grams, cooked = p.weighed === "cooked") {
+    return !p.ready_to_eat && cooked ? (+grams || 0) / (+p.cooked_yield || 1) : +grams || 0;
+  },
+  portion(p, grams, cooked) {
+    const f = this.labelGrams(p, grams, cooked) / p.base_g;
     return { kcal: Math.round(p.kcal * f), protein: Math.round(p.protein * f), carbs: Math.round(p.carbs * f), fat: Math.round(p.fat * f) };
   },
-  logProduct(p, grams) {
+  logProduct(p, grams, cooked) {
     grams = Math.round(+grams * 10) / 10;
+    if (cooked === undefined) cooked = p.weighed === "cooked";
     const stored = this.state.products[p.id];
-    if (stored) { stored.used = Date.now(); }
-    return this.addMeal({ name: `${p.name} · ${grams} g`.slice(0, 60), ...this.portion(p, grams) });
+    if (stored) { stored.used = Date.now(); if (!stored.ready_to_eat) stored.weighed = cooked ? "cooked" : "raw"; }
+    const tag = p.ready_to_eat ? "" : cooked ? " cocido" : " crudo";
+    return this.addMeal({ name: `${p.name} · ${grams} g${tag}`.slice(0, 60), ...this.portion(p, grams, cooked) });
   },
 
   setGoal(field, value) { this.state.goals[field] = value; this.save(); renderAll(); },
@@ -857,7 +866,7 @@ function photoSheet(file) {
     <div class="sh-head">
       <div class="sh-icon">⚖️<div class="beam"></div></div>
       <div><div class="sh-title">¿Cuánto marcó la báscula?</div>
-      <div class="sh-sub">Tara el plato, pesa la comida y escribe los gramos.</div></div>
+      <div class="sh-sub">Tara el plato, pesa la comida (cocinada está bien) y escribe los gramos.</div></div>
     </div>
     <div class="seg" id="fpSeg">
       <button class="seg-b on" data-m="label">🏷️ Etiqueta nutricional</button>
@@ -869,7 +878,7 @@ function photoSheet(file) {
       <textarea class="sh-ta" id="fpNote" placeholder="arroz con pollo, sin salsa…"></textarea>
       <div class="sh-chips" id="fpChips">${PHOTO_CHIPS.map((c) => `<button class="sh-chip">${c}</button>`).join("")}</div>
     </div>
-    <div class="sh-sub" id="fpHint">Leo los valores de la etiqueta y calculo exacto con tus gramos. El producto queda guardado: la próxima vez solo pones el peso.</div>
+    <div class="sh-sub" id="fpHint">Leo la etiqueta 3 veces y comparo. Si la etiqueta es del producto crudo (arroz, pasta, carne) y lo pesaste cocinado, lo convierto. Queda guardado: la próxima vez solo pones el peso.</div>
     <div class="sh-btns">
       <button class="sh-btn" id="fpCancel">Cancelar</button>
       <button class="sh-btn primary" id="fpGo">
@@ -887,8 +896,8 @@ function photoSheet(file) {
         box.querySelector("#fpPlate").hidden = mode !== "plate";
         box.querySelector("#fpReq").textContent = mode === "label" ? "(obligatorio)" : "(opcional)";
         box.querySelector("#fpHint").textContent = mode === "label"
-          ? "Leo los valores de la etiqueta y calculo exacto con tus gramos. El producto queda guardado: la próxima vez solo pones el peso."
-          : "Sin etiqueta la IA estima la composición del plato; con los gramos la estimación es mucho más precisa.";
+          ? "Leo la etiqueta 3 veces y comparo. Si la etiqueta es del producto crudo (arroz, pasta, carne) y lo pesaste cocinado, lo convierto. Queda guardado: la próxima vez solo pones el peso."
+          : "Sin etiqueta la IA estima el plato 3 veces por separado y uso el valor del medio. Con los gramos sale mucho más preciso.";
       };
       box.querySelector("#fpChips").onclick = (e) => {
         const b = e.target.closest(".sh-chip");
@@ -908,28 +917,52 @@ function photoSheet(file) {
 }
 
 /* ---------- hoja: confirmar etiqueta / pesar producto guardado ---------- */
-function productSheet(prod, grams = "", { scanned = false, note = "" } = {}) {
-  const p = { name: "", base_g: 100, kcal: "", protein: "", carbs: "", fat: "", ...prod };
+const FIELD_LABEL = { kcal: "calorías", protein: "proteína", carbs: "carbos", fat: "grasa", base_g: "tamaño de porción" };
+function productSheet(prod, grams = "", { scanned = null } = {}) {
+  const p = { name: "", base_g: 100, kcal: "", protein: "", carbs: "", fat: "", ready_to_eat: true, cooked_yield: 1, weighed: "cooked", ...prod };
   const saved = !!(p.id && App.state.products[p.id]);
+  let weighed = p.ready_to_eat ? "raw" : (p.weighed || "cooked");
+  const flag = new Set(scanned?.disagree || []);
+  const fl = (f) => (flag.has(f) ? " flag" : "");
+  let check = "";
+  if (scanned) {
+    const ok = !flag.size;
+    check = `<div class="sh-check ${ok ? "ok" : "bad"}">${ok
+      ? `✅ Leí la etiqueta ${scanned.reads} veces por separado y las ${scanned.reads} coinciden.`
+      : `⚠️ Leí la etiqueta ${scanned.reads} veces y no coincidieron en: <b>${[...flag].map((f) => FIELD_LABEL[f]).join(", ")}</b>. Compara esos campos (marcados) con la etiqueta.`}</div>`
+      + (scanned.reads < 3 ? `<div class="sh-warn">Solo ${scanned.reads} de 3 lecturas salieron bien. Revisa todo contra la etiqueta.</div>` : "")
+      + (scanned.atwater ? `<div class="sh-warn">🧮 Las calorías no cuadran con los macros: 4·P + 4·C + 9·G = ${scanned.atwater} kcal vs ${p.kcal} leídas. Puede ser fibra o redondeo, pero revisa calorías y macros.</div>` : "")
+      + (scanned.note ? `<div class="sh-warn">📝 ${esc(scanned.note)}</div>` : "");
+  }
   openSheet(`
     <div class="sh-head">
       <div class="sh-icon">🏷️</div>
-      <div><div class="sh-title">${scanned ? "Revisa la etiqueta" : esc(p.name)}</div>
-      <div class="sh-sub">${scanned ? "Esto es lo que leí. Si algo no cuadra con la etiqueta, corrígelo." : "Pon los gramos que marcó la báscula."}</div></div>
+      <div><div class="sh-title">${scanned ? "Revisa la etiqueta" : esc(p.name || "Producto manual")}</div>
+      <div class="sh-sub">${scanned ? "Compara estos números con la foto antes de registrar." : "Pon los gramos que marcó la báscula."}</div></div>
     </div>
-    ${note ? `<div class="sh-warn">⚠️ ${esc(note)}</div>` : ""}
-    <label class="pbox big"><span class="pbox-k">GRAMOS QUE VAS A COMER</span>
+    ${check}
+    <label class="pbox big"><span class="pbox-k">GRAMOS EN LA BÁSCULA</span>
       <input class="pbox-v" id="psGrams" type="number" inputmode="decimal" min="0" step="any" value="${grams}" placeholder="0"></label>
+    <div id="psCook" ${p.ready_to_eat ? "hidden" : ""}>
+      <div class="seg" id="psSeg">
+        <button class="seg-b ${weighed === "cooked" ? "on" : ""}" data-w="cooked">🍳 Lo pesé cocinado</button>
+        <button class="seg-b ${weighed === "raw" ? "on" : ""}" data-w="raw">🥩 Crudo / seco</button>
+      </div>
+      <label class="pbox wide yield"><span class="pbox-k">RENDIMIENTO: 1 g CRUDO → ? g COCIDO</span>
+        <input class="pbox-v" id="psYield" type="number" inputmode="decimal" min="0.1" step="any" value="${p.cooked_yield}"></label>
+      <div class="sh-sub" id="psYieldHint"></div>
+    </div>
     <div class="sh-result" id="psResult"></div>
     <details class="sh-det" ${scanned ? "open" : ""}>
       <summary>Datos de la etiqueta</summary>
       <div class="sh-form">
-        <label class="pbox wide"><span class="pbox-k">PRODUCTO</span><input class="pbox-v" id="psName" type="text" value="${esc(p.name)}" placeholder="Avena Quaker"></label>
-        <label class="pbox wide"><span class="pbox-k">VALORES POR (G)</span><input class="pbox-v" id="psBase" type="number" inputmode="decimal" min="1" step="any" value="${p.base_g}"></label>
-        <label class="pbox"><span class="pbox-k">CALORÍAS</span><input class="pbox-v" id="psKcal" type="number" inputmode="decimal" min="0" step="any" value="${p.kcal}"></label>
-        <label class="pbox"><span class="pbox-k">PROTEÍNA (G)</span><input class="pbox-v" id="psProt" type="number" inputmode="decimal" min="0" step="any" value="${p.protein}"></label>
-        <label class="pbox"><span class="pbox-k">CARBOS (G)</span><input class="pbox-v" id="psCarb" type="number" inputmode="decimal" min="0" step="any" value="${p.carbs}"></label>
-        <label class="pbox"><span class="pbox-k">GRASA (G)</span><input class="pbox-v" id="psFat" type="number" inputmode="decimal" min="0" step="any" value="${p.fat}"></label>
+        <label class="pbox wide"><span class="pbox-k">PRODUCTO</span><input class="pbox-v" id="psName" type="text" value="${esc(p.name)}" placeholder="Arroz Goya"></label>
+        <label class="pbox wide${fl("base_g")}"><span class="pbox-k">VALORES POR (G)</span><input class="pbox-v" id="psBase" type="number" inputmode="decimal" min="1" step="any" value="${p.base_g}"></label>
+        <label class="pbox${fl("kcal")}"><span class="pbox-k">CALORÍAS</span><input class="pbox-v" id="psKcal" type="number" inputmode="decimal" min="0" step="any" value="${p.kcal}"></label>
+        <label class="pbox${fl("protein")}"><span class="pbox-k">PROTEÍNA (G)</span><input class="pbox-v" id="psProt" type="number" inputmode="decimal" min="0" step="any" value="${p.protein}"></label>
+        <label class="pbox${fl("carbs")}"><span class="pbox-k">CARBOS (G)</span><input class="pbox-v" id="psCarb" type="number" inputmode="decimal" min="0" step="any" value="${p.carbs}"></label>
+        <label class="pbox${fl("fat")}"><span class="pbox-k">GRASA (G)</span><input class="pbox-v" id="psFat" type="number" inputmode="decimal" min="0" step="any" value="${p.fat}"></label>
+        <label class="pbox wide chk"><input type="checkbox" id="psRaw" ${p.ready_to_eat ? "" : "checked"}><span>La etiqueta es del producto <b>crudo/seco</b> (arroz, pasta, avena, carne cruda…)</span></label>
       </div>
       ${saved ? `<button class="sh-link" id="psDel">Borrar producto guardado</button>` : ""}
     </details>
@@ -939,14 +972,37 @@ function productSheet(prod, grams = "", { scanned = false, note = "" } = {}) {
       const read = () => ({
         id: p.id, name: q("#psName").value.trim() || "Producto", base_g: +q("#psBase").value || 0,
         kcal: +q("#psKcal").value || 0, protein: +q("#psProt").value || 0, carbs: +q("#psCarb").value || 0, fat: +q("#psFat").value || 0,
+        ready_to_eat: !q("#psRaw").checked, cooked_yield: +q("#psYield").value || 1, weighed,
       });
       const paint = () => {
         const d = read(), g = +q("#psGrams").value || 0;
+        q("#psCook").hidden = d.ready_to_eat;
+        q("#psYieldHint").textContent = `Ej.: 100 g crudo → ${Math.round(100 * d.cooked_yield)} g cocido. Si un día pesas crudo y luego cocido, pon tu número real: es lo que más afina.`;
         if (!g || !d.base_g) { q("#psResult").innerHTML = `<span class="muted">Escribe los gramos para ver los macros</span>`; return; }
-        const m = App.portion(d, g);
-        q("#psResult").innerHTML = `<b>${m.kcal} kcal</b><span>P ${m.protein}g</span><span>C ${m.carbs}g</span><span>G ${m.fat}g</span>`;
+        const cooked = !d.ready_to_eat && weighed === "cooked";
+        // se calcula por 3 caminos distintos; si no dan lo mismo, no se registra
+        const m = App.portion(d, g, cooked);
+        const lg = App.labelGrams(d, g, cooked);
+        const alt = Math.round(d.kcal / d.base_g * lg);
+        const alt2 = Math.round(g * (d.kcal / (cooked ? d.cooked_yield : 1)) / d.base_g);
+        const agree = Math.abs(m.kcal - alt) <= 1 && Math.abs(m.kcal - alt2) <= 1;
+        q("#psSave").disabled = !agree;
+        q("#psResult").innerHTML = `<b>${m.kcal} kcal</b><span>P ${m.protein}g</span><span>C ${m.carbs}g</span><span>G ${m.fat}g</span>`
+          + (cooked ? `<span class="muted wide">${g} g cocido ≈ ${Math.round(lg)} g crudo de la etiqueta</span>` : "")
+          + (agree ? "" : `<span class="bad wide">Los 3 cálculos no coinciden, revisa los datos</span>`);
       };
-      box.addEventListener("input", paint);
+      q("#psSeg").onclick = (e) => {
+        const b = e.target.closest(".seg-b");
+        if (!b) return;
+        weighed = b.dataset.w;
+        box.querySelectorAll("#psSeg .seg-b").forEach((x) => x.classList.toggle("on", x === b));
+        paint();
+      };
+      q("#psRaw").onchange = () => {
+        if (q("#psRaw").checked && +q("#psYield").value === 1) q("#psYield").value = 2.5;
+        paint();
+      };
+      box.querySelectorAll("input").forEach((i) => { i.oninput = paint; });
       paint();
       if (!grams) q("#psGrams").focus();
       q("#psCancel").onclick = closeSheet;
@@ -956,10 +1012,47 @@ function productSheet(prod, grams = "", { scanned = false, note = "" } = {}) {
         if (g <= 0) { toast("Escribe los gramos ⚖️"); q("#psGrams").focus(); return; }
         if (d.base_g <= 0) { toast("Falta «valores por (g)» ⚠️"); return; }
         const prodSaved = App.saveProduct(d);
-        const meal = App.logProduct(prodSaved, g);
+        const meal = App.logProduct(prodSaved, g, !prodSaved.ready_to_eat && weighed === "cooked");
         pushChat("action", `⚖️ Registré «${meal.name}» — ${meal.kcal} kcal · P ${meal.protein}g · C ${meal.carbs}g · G ${meal.fat}g`);
         closeSheet();
         toast(`+${meal.kcal} kcal registradas ⚖️`);
+      };
+    });
+}
+
+/* ---------- hoja: confirmar estimación de plato (3 estimaciones) ---------- */
+function estimateSheet(e) {
+  const rg = (f) => e.range[f][0] === e.range[f][1] ? "" : ` <i>(${e.range[f][0]}–${e.range[f][1]})</i>`;
+  const wide = e.range.kcal[1] - e.range.kcal[0] > Math.max(40, e.kcal * 0.15);
+  openSheet(`
+    <div class="sh-head">
+      <div class="sh-icon">🍲</div>
+      <div><div class="sh-title">Revisa la estimación</div>
+      <div class="sh-sub">Sin etiqueta esto es una estimación. Hice ${e.reads} por separado; uso el valor del medio.</div></div>
+    </div>
+    <div class="sh-check ${wide ? "bad" : "ok"}">${wide
+      ? `⚠️ Las ${e.reads} estimaciones variaron bastante (${e.range.kcal[0]}–${e.range.kcal[1]} kcal). Ajusta si sabes qué lleva el plato.`
+      : `✅ Las ${e.reads} estimaciones salieron parecidas: ${e.kcal} kcal${rg("kcal")}.`}</div>
+    <div class="sh-form">
+      <label class="pbox wide"><span class="pbox-k">NOMBRE</span><input class="pbox-v" id="esName" type="text" value="${esc(e.name)}"></label>
+      <label class="pbox"><span class="pbox-k">CALORÍAS${rg("kcal")}</span><input class="pbox-v" id="esKcal" type="number" min="0" value="${e.kcal}"></label>
+      <label class="pbox"><span class="pbox-k">PROTEÍNA (G)${rg("protein")}</span><input class="pbox-v" id="esProt" type="number" min="0" value="${e.protein}"></label>
+      <label class="pbox"><span class="pbox-k">CARBOS (G)${rg("carbs")}</span><input class="pbox-v" id="esCarb" type="number" min="0" value="${e.carbs}"></label>
+      <label class="pbox"><span class="pbox-k">GRASA (G)${rg("fat")}</span><input class="pbox-v" id="esFat" type="number" min="0" value="${e.fat}"></label>
+    </div>
+    <div class="sh-btns"><button class="sh-btn" id="esCancel">Cancelar</button><button class="sh-btn primary" id="esSave">REGISTRAR</button></div>`,
+    (box) => {
+      const q = (id) => box.querySelector(id);
+      q("#esCancel").onclick = closeSheet;
+      q("#esSave").onclick = () => {
+        const meal = App.addMeal({
+          name: q("#esName").value.trim().slice(0, 60) || "Comida",
+          kcal: Math.max(0, Math.round(+q("#esKcal").value || 0)), protein: Math.max(0, Math.round(+q("#esProt").value || 0)),
+          carbs: Math.max(0, Math.round(+q("#esCarb").value || 0)), fat: Math.max(0, Math.round(+q("#esFat").value || 0)),
+        });
+        pushChat("action", `✅ Registré «${meal.name}» — ${meal.kcal} kcal · P ${meal.protein}g · C ${meal.carbs}g · G ${meal.fat}g (mediana de ${e.reads} estimaciones)`);
+        closeSheet();
+        toast(`+${meal.kcal} kcal registradas 🍲`);
       };
     });
 }
@@ -976,13 +1069,13 @@ function productsSheet() {
     ${list.length ? `<div class="prod-list">${list.map((p) => `
       <button class="prod-row" data-id="${esc(p.id)}">
         <span class="prod-name">${esc(p.name)}</span>
-        <span class="prod-meta">${p.kcal} kcal · P${p.protein} C${p.carbs} G${p.fat} <i>/ ${p.base_g} g</i></span>
+        <span class="prod-meta">${p.kcal} kcal · P${p.protein} C${p.carbs} G${p.fat} <i>/ ${p.base_g} g${p.ready_to_eat === false ? " crudo" : ""}</i></span>
       </button>`).join("")}</div>`
       : `<div class="empty">Aún no guardas productos.<br>Toma foto de una etiqueta con <b>TOMAR</b>.</div>`}
     <div class="sh-btns"><button class="sh-btn" id="plClose">Cerrar</button><button class="sh-btn primary" id="plNew">+ MANUAL</button></div>`,
     (box) => {
       box.querySelector("#plClose").onclick = closeSheet;
-      box.querySelector("#plNew").onclick = () => productSheet({}, "", { scanned: true });
+      box.querySelector("#plNew").onclick = () => productSheet({});
       box.querySelectorAll(".prod-row").forEach((b) => {
         b.onclick = () => productSheet(App.state.products[b.dataset.id]);
       });
@@ -1087,14 +1180,12 @@ function photoLoading(on, label = "Analizando tu comida…") {
 function resetPhotoInputs() { $("photoInputCam").value = ""; $("photoInputGal").value = ""; }
 
 async function runPhotoAnalysis(file, note, grams = 0) {
-  photoLoading(true);
+  photoLoading(true, "Estimando 3 veces…");
   try {
     const b64 = await resizeImage(file);
-    const { text, actions } = await analyzeFoodPhoto(b64, note, grams);
-    for (const a of actions) pushChat("action", a);
-    if (text) pushChat("bot", text);
-    if (actions.length) { toast("¡Comida registrada desde la foto! 📸"); document.querySelector(".tab-glow").classList.add("on"); }
-    else { toast(text ? "El bot respondió en el chat 🤖" : "No pude identificar comida 😅"); if (text) document.querySelector(".tab-glow").classList.add("on"); }
+    const e = await estimateMealPhoto(b64, note, grams);
+    if (!e) { toast("No pude identificar comida 😅"); return; }
+    estimateSheet(e);
   } catch (err) {
     toast(`⚠️ ${err.message}`);
   } finally {
@@ -1103,7 +1194,7 @@ async function runPhotoAnalysis(file, note, grams = 0) {
 }
 
 async function runLabelScan(file, grams) {
-  photoLoading(true, "Leyendo la etiqueta…");
+  photoLoading(true, "Leyendo la etiqueta 3 veces…");
   try {
     // más resolución: los números de la tabla son pequeños
     const b64 = await resizeImage(file, 1568);
@@ -1113,7 +1204,9 @@ async function runLabelScan(file, grams) {
       return;
     }
     const existing = App.state.products[App.normName(d.name).replace(/ /g, "-")];
-    productSheet({ ...d, id: existing?.id }, grams, { scanned: true, note: d.note });
+    const { reads, disagree, atwater, note, readable, ...prod } = d;
+    productSheet({ ...prod, id: existing?.id, weighed: existing?.weighed || "cooked" }, grams,
+      { scanned: { reads, disagree, atwater, note } });
   } catch (err) {
     toast(`⚠️ ${err.message}`);
   } finally {
