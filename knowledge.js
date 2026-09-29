@@ -91,34 +91,6 @@ const FOODS = [
   { keys: ["sopa"], name: "Sopa casera (1 plato)", kcal: 150, protein: 8, carbs: 18, fat: 5 },
 ];
 
-/* Alimentos básicos YA COCIDOS / listos para comer, por 100 g.
-   Fuente: USDA FoodData Central (SR Legacy). Para pesar en báscula sin etiqueta. */
-const COOKED_FOODS = [
-  { name: "Arroz blanco cocido", kcal: 130, protein: 2.7, carbs: 28.2, fat: 0.3 },
-  { name: "Arroz integral cocido", kcal: 111, protein: 2.6, carbs: 23.0, fat: 0.9 },
-  { name: "Pasta cocida", kcal: 158, protein: 5.8, carbs: 30.9, fat: 0.9 },
-  { name: "Avena cocida en agua", kcal: 71, protein: 2.5, carbs: 12.0, fat: 1.5 },
-  { name: "Papa horneada con cáscara", kcal: 93, protein: 2.5, carbs: 21.2, fat: 0.1 },
-  { name: "Papa hervida sin cáscara", kcal: 86, protein: 1.7, carbs: 20.0, fat: 0.1 },
-  { name: "Camote horneado", kcal: 90, protein: 2.0, carbs: 20.7, fat: 0.2 },
-  { name: "Plátano verde hervido", kcal: 116, protein: 0.8, carbs: 31.2, fat: 0.2 },
-  { name: "Frijoles negros cocidos", kcal: 132, protein: 8.9, carbs: 23.7, fat: 0.5 },
-  { name: "Frijoles pintos cocidos", kcal: 143, protein: 9.0, carbs: 26.2, fat: 0.7 },
-  { name: "Lentejas cocidas", kcal: 116, protein: 9.0, carbs: 20.1, fat: 0.4 },
-  { name: "Pechuga de pollo asada sin piel", kcal: 165, protein: 31.0, carbs: 0, fat: 3.6 },
-  { name: "Muslo de pollo asado sin piel", kcal: 209, protein: 25.9, carbs: 0, fat: 10.9 },
-  { name: "Carne molida 85/15 cocida", kcal: 250, protein: 25.9, carbs: 0, fat: 15.4 },
-  { name: "Salmón horneado", kcal: 206, protein: 22.1, carbs: 0, fat: 12.4 },
-  { name: "Tilapia horneada", kcal: 128, protein: 26.2, carbs: 0, fat: 2.7 },
-  { name: "Huevo duro", kcal: 155, protein: 12.6, carbs: 1.1, fat: 10.6 },
-  { name: "Brócoli cocido", kcal: 35, protein: 2.4, carbs: 7.2, fat: 0.4 },
-  { name: "Aguacate", kcal: 160, protein: 2.0, carbs: 8.5, fat: 14.7 },
-  { name: "Banana", kcal: 89, protein: 1.1, carbs: 22.8, fat: 0.3 },
-  { name: "Tortilla de maíz", kcal: 218, protein: 5.7, carbs: 44.6, fat: 2.9 },
-  { name: "Aceite (oliva o vegetal)", kcal: 884, protein: 0, carbs: 0, fat: 100 },
-  { name: "Mantequilla", kcal: 717, protein: 0.9, carbs: 0.1, fat: 81.1 },
-].map((f) => ({ ...f, id: "usda-" + f.name.toLowerCase().normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/[^a-z0-9]+/g, "-"), base_g: 100, ready_to_eat: true, cooked_yield: 1, builtin: true }));
-
 function findFood(text) {
   const t = text.toLowerCase();
   return FOODS.find((f) => f.keys.some((k) => t.includes(k))) || null;

@@ -17,15 +17,12 @@ La app original tenía una sola pantalla (subir foto → analizar). Ahora es una
 
 ## ⚖️ Pesa y registra
 
-Tres botones en **Hoy**, uno por caso:
+Dos opciones en **Hoy**:
 
-| Botón | Para qué | Precisión |
-|---|---|---|
-| **⚖️ Pesar alimento** | Whole foods ya cocidos (pollo, papa, arroz, huevo…) con la tabla USDA por 100 g, o tus productos guardados. Eliges, pones gramos, registras. Sin IA. | La más alta |
-| **🏷️ Etiqueta nueva** | Producto empacado: la IA lee la etiqueta 3 veces, marca discrepancias y chequea `4P+4C+9G ≈ kcal`. Si la etiqueta es cruda y lo pesaste cocinado, convierte con el rendimiento USDA. Queda guardado. | Alta |
-| **📸 Foto del plato** | Comidas fuera o platos mixtos: 3 estimaciones, mediana y rango. | Estimación |
+- **🏷️ Escanear producto:** foto de la etiqueta → escribes qué es y cuánto pesa en la báscula → ves los macros y registras. Si la etiqueta es del producto crudo (arroz, papa, pollo) y lo pesaste cocinado, convierte con el rendimiento típico USDA. Queda guardado: la próxima vez lo eliges de la lista sin gastar API.
+- **📸 Foto del plato:** comidas sin etiqueta. La IA desglosa el plato, lo revisa y da el total; tú confirmas.
 
-En el chat también: *«150 g de pechuga de pollo»*, *«180 g de arroz goya cocido»*.
+**Revisión (1 llamada a la API por foto):** la IA primero transcribe la etiqueta, luego revisa cada número contra la foto y solo entonces responde. Además la app revisa gratis, en código: que `4P + 4C + 9G ≈ kcal`, que los macros no pesen más que la porción y que las calorías sean físicamente posibles. La cuenta final la hace la app, no la IA.
 
 ## 🧠 El bot
 

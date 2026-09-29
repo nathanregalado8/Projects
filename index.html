@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=13">
+  <link rel="stylesheet" href="styles.css?v=14">
   <link rel="manifest" href="manifest.json">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -100,12 +100,11 @@
           </div>
           <div class="photo-txt">
             <div class="photo-title">Pesa y registra</div>
-            <div class="photo-sub">báscula + etiqueta o tabla USDA = macros exactos</div>
+            <div class="photo-sub">escanea la etiqueta + pon el peso = macros exactos</div>
           </div>
         </div>
         <div class="photo-btns" id="photoBtns">
-          <button class="pbtn pbtn-wide" id="btnWeigh">⚖️ PESAR ALIMENTO</button>
-          <button class="pbtn pbtn-alt" id="btnLabel">🏷️ ETIQUETA NUEVA</button>
+          <button class="pbtn" id="btnLabel">🏷️ ESCANEAR PRODUCTO</button>
           <button class="pbtn pbtn-alt" id="btnPlate">📸 FOTO DEL PLATO</button>
         </div>
         <div class="photo-loading" id="photoLoading" hidden>
@@ -120,7 +119,7 @@
           <button class="add-btn" id="addMealBtn">+ Agregar</button>
         </div>
         <div id="mealList"></div>
-        <div class="empty" id="mealEmpty">Aún no registras comidas.<br>Usa <b>Pesar</b>, <b>+ Agregar</b> o pídeselo al bot.</div>
+        <div class="empty" id="mealEmpty">Aún no registras comidas.<br>Escanea un producto, usa <b>+ Agregar</b> o pídeselo al bot.</div>
       </section>
     </main>
 
@@ -288,8 +287,8 @@
 
   <div class="toast" id="toast" hidden></div>
 
-  <script src="knowledge.js?v=13"></script>
-  <script src="bot.js?v=13"></script>
-  <script src="app.js?v=13"></script>
+  <script src="knowledge.js?v=14"></script>
+  <script src="bot.js?v=14"></script>
+  <script src="app.js?v=14"></script>
 </body>
 </html>
