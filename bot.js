@@ -329,10 +329,17 @@ async function askClaude(userText, onAction) {
 }
 
 /* ---------- Foto de plato → estimación desglosada (1 llamada) ---------- */
-async function estimateMealPhoto(base64jpeg, note = "", grams = 0) {
-  const text = "Analiza esta foto de comida con cuidado. Desglosa cada componente, estima porciones realistas, revisa tu desglose y da el total. Devuélvelo con estimate_meal. Si no es comida, is_food false."
+// prev + comments: re-estimación cuando el usuario corrige («creo que es menos papas»)
+async function estimateMealPhoto(base64jpeg, note = "", grams = 0, prev = null, comments = []) {
+  let text = "Analiza esta foto de comida con cuidado. Desglosa cada componente, estima porciones realistas, revisa tu desglose y da el total. Devuélvelo con estimate_meal. Si no es comida, is_food false."
     + (grams ? `\n\nEl usuario pesó la comida ya servida: ${grams} g netos en total. Tus gramos por componente deben sumar ${grams} g; usa valores USDA de alimentos cocidos.` : "")
     + (note ? `\n\nDetalles del usuario (tenlos muy en cuenta): ${note}` : "");
+  if (prev) {
+    const items = prev.items.map((i) => `- ${i.food}: ~${Math.round(i.grams)} g, ${Math.round(i.kcal)} kcal`).join("\n");
+    text += `\n\nTu estimación anterior fue:\n${items}\nTotal: ${prev.kcal} kcal · P ${prev.protein} · C ${prev.carbs} · G ${prev.fat}`
+      + `\n\nEl usuario vio el plato en persona y te corrige (sus comentarios mandan sobre lo que ves en la foto, en orden):\n${comments.map((c, i) => `${i + 1}. «${c}»`).join("\n")}`
+      + `\n\nAjusta SOLO lo que pide el usuario (cantidades, ingredientes que faltan o sobran, forma de cocinar) y deja igual lo demás. Recalcula el total y los macros, y revísalos.`;
+  }
   const response = await claudeRequest(
     [{ role: "user", content: [{ type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64jpeg } }, { type: "text", text }] }],
     { tools: [ESTIMATE_TOOL], tool_choice: { type: "tool", name: "estimate_meal" }, max_tokens: 2048 });

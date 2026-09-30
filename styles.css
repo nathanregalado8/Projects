@@ -884,3 +884,14 @@ button, a, input, select, textarea, label { touch-action: manipulation; }
 .cheer b { align-self: flex-end; font-size: 12px; letter-spacing: 1px; color: #F7892F; }
 .cheer.out { opacity: 0; transform: translate(-50%, -12px); transition: all .35s ease; }
 @keyframes cheerIn { from { opacity: 0; transform: translate(-50%, -16px); } to { opacity: 1; transform: translate(-50%, 0); } }
+
+/* ajustar estimación con un comentario */
+.adj-box { display: flex; gap: 8px; align-items: center; padding: 6px 6px 6px 14px; border-radius: 18px; background: #fff; border: 1.5px solid var(--line); }
+.adj-box:focus-within { border-color: var(--orange); }
+.adj-in { flex: 1; min-width: 0; border: none; outline: none; background: none; font-size: 16px; color: var(--ink); padding: 8px 0; }
+.adj-in::placeholder { color: var(--muted-2); font-size: 14px; }
+.adj-btn { flex-shrink: 0; min-width: 96px; height: 42px; padding: 0 14px; border-radius: 14px; background: var(--ink); color: #fff; font-family: "Montserrat", sans-serif; font-weight: 800; font-size: 12.5px; letter-spacing: .6px; display: grid; place-items: center; }
+.adj-btn:disabled { opacity: .7; }
+.spinner.sm { width: 18px; height: 18px; border-width: 2.5px; }
+.adj-hist { display: flex; flex-wrap: wrap; gap: 6px; }
+.adj-hist span { padding: 6px 10px; border-radius: 999px; background: var(--chip-bg); border: 1px solid var(--line); font-size: 12px; color: var(--ink-2); }

@@ -997,18 +997,25 @@ function productSheet(prod, grams = "", { scanned = null } = {}) {
 }
 
 /* ---------- hoja: confirmar estimación de plato ---------- */
-function estimateSheet(e) {
+function estimateSheet(e, ctx = null, before = null) {
   const issues = e.issues || [];
+  const comments = ctx?.comments || [];
   openSheet(`
     <div class="sh-head">
       <div class="sh-icon">🍲</div>
-      <div><div class="sh-title">Revisa la estimación</div>
-      <div class="sh-sub">Sin etiqueta esto es una estimación. Ajusta lo que sepas antes de registrar.</div></div>
+      <div><div class="sh-title">${comments.length ? "Estimación ajustada" : "Revisa la estimación"}</div>
+      <div class="sh-sub">Sin etiqueta esto es una estimación. Corrige lo que sepas antes de registrar.</div></div>
     </div>
+    ${before ? `<div class="sh-check ok">Ajusté: ${before.kcal} → <b>${e.kcal} kcal</b> (${e.kcal - before.kcal >= 0 ? "+" : ""}${e.kcal - before.kcal})</div>` : ""}
+    ${comments.length ? `<div class="adj-hist">${comments.map((c) => `<span>💬 ${esc(c)}</span>`).join("")}</div>` : ""}
     ${issues.map((i) => `<div class="sh-check bad">⚠️ ${esc(i)}</div>`).join("")}
-    ${e.confidence && e.confidence !== "alta" ? `<div class="sh-warn">Confianza ${esc(e.confidence)}: si sabes qué lleva el plato, corrige los números.</div>` : ""}
+    ${e.confidence && e.confidence !== "alta" ? `<div class="sh-warn">Confianza ${esc(e.confidence)}: si sabes qué lleva el plato, díselo abajo.</div>` : ""}
     ${e.items.length ? `<div class="est-items">${e.items.map((i) =>
       `<div class="est-row"><span>${esc(i.food)}</span><i>~${Math.round(i.grams)} g</i><b>${Math.round(i.kcal)} kcal</b></div>`).join("")}</div>` : ""}
+    ${ctx ? `<div class="adj-box">
+      <input class="adj-in" id="esComment" type="text" placeholder="¿Algo no cuadra? ej. menos papas, sin aceite">
+      <button class="adj-btn" id="esAdjust">AJUSTAR</button>
+    </div>` : ""}
     <div class="sh-form">
       <label class="pbox wide"><span class="pbox-k">NOMBRE</span><input class="pbox-v" id="esName" type="text" value="${esc(e.name)}"></label>
       <label class="pbox"><span class="pbox-k">CALORÍAS</span><input class="pbox-v" id="esKcal" type="number" min="0" value="${e.kcal}"></label>
@@ -1016,10 +1023,30 @@ function estimateSheet(e) {
       <label class="pbox"><span class="pbox-k">CARBOS (G)</span><input class="pbox-v" id="esCarb" type="number" min="0" value="${e.carbs}"></label>
       <label class="pbox"><span class="pbox-k">GRASA (G)</span><input class="pbox-v" id="esFat" type="number" min="0" value="${e.fat}"></label>
     </div>
-    <div class="sh-btns"><button class="sh-btn" id="esCancel">Cancelar</button><button class="sh-btn primary" id="esSave">REGISTRAR</button></div>`,
+    <div class="sh-btns"><button class="sh-btn" id="esCancel">Cancelar</button><button class="sh-btn primary" id="esSave">REGISTRAR ${e.kcal} KCAL</button></div>`,
     (box) => {
       const q = (id) => box.querySelector(id);
       q("#esCancel").onclick = closeSheet;
+      q("#esKcal").oninput = () => { q("#esSave").textContent = `REGISTRAR ${Math.max(0, Math.round(+q("#esKcal").value || 0))} KCAL`; };
+      if (ctx) {
+        const adjust = async () => {
+          const c = q("#esComment").value.trim();
+          if (!c) { q("#esComment").focus(); return; }
+          const btn = q("#esAdjust");
+          btn.disabled = true; btn.innerHTML = `<span class="spinner sm"></span>`;
+          try {
+            const all = [...comments, c];
+            const next = await estimateMealPhoto(ctx.b64, ctx.note, ctx.grams, e, all);
+            if (!next) { toast("No pude ajustarlo 😅"); btn.disabled = false; btn.textContent = "AJUSTAR"; return; }
+            estimateSheet(next, { ...ctx, comments: all }, e);
+          } catch (err) {
+            toast(`⚠️ ${err.message}`);
+            btn.disabled = false; btn.textContent = "AJUSTAR";
+          }
+        };
+        q("#esAdjust").onclick = adjust;
+        q("#esComment").onkeydown = (ev) => { if (ev.key === "Enter") adjust(); };
+      }
       q("#esSave").onclick = () => {
         const meal = App.addMeal({
           name: q("#esName").value.trim().slice(0, 60) || "Comida",
@@ -1193,7 +1220,7 @@ async function runPhotoAnalysis(file, note, grams = 0) {
     const b64 = await resizeImage(file);
     const e = await estimateMealPhoto(b64, note, grams);
     if (!e) { toast("No pude identificar comida 😅"); return; }
-    estimateSheet(e);
+    estimateSheet(e, { b64, note, grams, comments: [] });
   } catch (err) {
     toast(`⚠️ ${err.message}`);
   } finally {
