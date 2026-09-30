@@ -18,9 +18,9 @@ const DEFAULT_STATE = {
 };
 
 const MACRO_META = {
-  protein: { key: "Protein", letter: "P", name: "Proteína", color: "#7C3AED", soft: "rgba(124,58,237,.12)", grad: "linear-gradient(90deg,#A78BFA,#7C3AED)" },
-  carbs:   { key: "Carbs",   letter: "C", name: "Carbos",   color: "#D97706", soft: "rgba(217,119,6,.12)",  grad: "linear-gradient(90deg,#FBBF24,#D97706)" },
-  fat:     { key: "Fat",     letter: "G", name: "Grasa",    color: "#E11D48", soft: "rgba(225,29,72,.12)",  grad: "linear-gradient(90deg,#FB7185,#E11D48)" },
+  protein: { key: "Protein", letter: "P", name: "Proteína", color: "#2B3035", soft: "rgba(43,48,53,.10)", grad: "linear-gradient(90deg,#5F656B,#2B3035)" },
+  carbs:   { key: "Carbs",   letter: "C", name: "Carbos",   color: "#F26A21", soft: "rgba(242,106,33,.12)", grad: "linear-gradient(90deg,#F7892F,#F26A21)" },
+  fat:     { key: "Fat",     letter: "G", name: "Grasa",    color: "#B8875A", soft: "rgba(184,135,90,.14)", grad: "linear-gradient(90deg,#D2A77E,#B8875A)" },
 };
 
 const App = {
@@ -233,145 +233,32 @@ const foodEmoji = (n) => (FOOD_EMOJIS.find(([re]) => re.test(n)) || [, "🍽️"
 /* ==========================================================
    Medidor de calorías — 8 estilos de un mismo sistema
    ========================================================== */
-const HERO_MODES = ["capsula", "bateria", "numero", "torre", "ecualizador", "termometro", "pixeles", "balance"];
-const HERO_NAMES = {
-  auto: "Auto", capsula: "Cápsula", bateria: "Batería", numero: "Número",
-  torre: "Torre", ecualizador: "Ecualizador", termometro: "Termómetro", pixeles: "Píxeles", balance: "Balance",
-};
-const MACRO_THEME = {
-  bateria: "seg", torre: "seg", ecualizador: "seg", pixeles: "seg",
-  capsula: "liq", termometro: "liq",
-  numero: "cls", balance: "cls",
-};
-const EQ_HEIGHTS = [18, 34, 26, 46, 30, 52, 38, 58, 28, 44, 22, 50, 32, 40, 24, 36];
-const WAVE = (h, fill) => `<svg class="cap-wave${h === 24 ? " w2" : ""}" viewBox="0 0 920 ${h}" preserveAspectRatio="none"><path d="M0 ${h / 2} Q 57 0 115 ${h / 2} T 230 ${h / 2} T 345 ${h / 2} T 460 ${h / 2} T 575 ${h / 2} T 690 ${h / 2} T 805 ${h / 2} T 920 ${h / 2} V ${h} H 0 Z" fill="${fill}"/></svg>`;
-
-function activeHeroMode() {
-  const pref = App.state.heroStyle;
-  if (pref !== "auto") return pref;
-  const n = Math.floor(new Date(App.state.currentDate + "T12:00:00").getTime() / 86400000);
-  return HERO_MODES[((n % HERO_MODES.length) + HERO_MODES.length) % HERO_MODES.length];
-}
-
+/* medidor de calorías: un solo diseño fijo (anillo) */
 function renderHero(t, g) {
   const stage = $("heroStage");
-  const mode = activeHeroMode();
   const pct = Math.max(0, Math.min(1, t.kcal / g.kcal));
   const over = t.kcal > g.kcal;
-  const rest = Math.max(0, g.kcal - t.kcal);
-  const build = stage.dataset.mode !== mode;
-  if (build) stage.dataset.mode = mode;
-
-  const N = (size) => `<span class="kbig" id="heroKcal" style="font-size:${size}px">0</span>`;
-
-  if (build) {
-    if (mode === "capsula") {
-      stage.innerHTML = `<div class="cap">
-        <div class="cap-water" id="capWater">
-          ${WAVE(28, "rgba(255,138,0,.9)")}${WAVE(24, "#FF5A3C")}
-          <div class="cap-fill"></div>
-          <div class="cap-b" style="left:30%;width:6px;height:6px"></div>
-          <div class="cap-b" style="left:60%;width:4px;height:4px;animation-duration:2.4s;animation-delay:1s"></div>
-        </div>
-        <div class="cap-txt">${N(50)}<div class="klbl" id="heroSub"></div></div>
-      </div>`;
-    } else if (mode === "bateria") {
-      stage.innerHTML = `<div class="col-c">
-        <div class="row-base">${N(54)}<span class="klbl" id="heroSub"></span></div>
-        <div class="bat-box"><div class="bat-cells" id="batCells">${'<div class="cell"></div>'.repeat(12)}</div><div class="bat-tip"></div></div>
-      </div>`;
-    } else if (mode === "numero") {
-      stage.innerHTML = `<div class="col-c">
-        <div class="num-hero" id="heroKcal">0</div>
-        <div class="num-bar"><div class="num-fill" id="numFill"></div></div>
-        <div class="num-legend"><span>0</span><span class="meta" id="heroSub"></span></div>
-      </div>`;
-    } else if (mode === "torre") {
-      stage.innerHTML = `<div class="tower-wrap">
-        <div class="tower" id="towerCol">${'<div class="blk"></div>'.repeat(10)}</div>
-        <div style="padding-bottom:8px">${N(44)}<div class="klbl" id="heroSub"></div></div>
-      </div>`;
-    } else if (mode === "ecualizador") {
-      stage.innerHTML = `<div class="col-c">
-        <div class="row-base">${N(46)}<span class="klbl" id="heroSub"></span></div>
-        <div class="eq-box" id="eqRow">${EQ_HEIGHTS.map((h, i) => `<div class="eqb" style="height:${h}px;animation-delay:${i * .09}s"></div>`).join("")}</div>
-      </div>`;
-    } else if (mode === "termometro") {
-      stage.innerHTML = `<div class="thermo-wrap">
-        <div class="thermo-col">
-          <div class="thermo"><div class="thermo-fill" id="thermoFill"></div><div class="thermo-gloss"></div></div>
-          <div class="thermo-bulb"></div>
-        </div>
-        <div class="thermo-legend">
-          ${N(46)}<div class="klbl" id="heroSub"></div>
-          <div class="tl-row meta" style="margin-top:6px"><i></i><span id="tlMeta"></span></div>
-          <div class="tl-row half"><i></i><span id="tlHalf"></span></div>
-        </div>
-      </div>`;
-    } else if (mode === "pixeles") {
-      stage.innerHTML = `<div class="col-c">
-        <div class="row-base">${N(42)}<span class="klbl" id="heroSub"></span></div>
-        <div class="pix-grid" id="pixGrid">${'<div class="px"></div>'.repeat(50)}</div>
-      </div>`;
-    } else {
-      stage.innerHTML = `<div class="bal">
-        <div class="bal-top">
-          <div><div class="bal-k eat">LLEVAS</div><div class="bal-num" id="heroKcal" style="color:var(--ink)">0</div></div>
-          <div style="text-align:right"><div class="bal-k left">TE QUEDAN</div><div class="bal-num" id="balRest" style="color:var(--lime)">0</div></div>
-        </div>
-        <div class="bal-track"><div class="bal-fill" id="balFill"><i></i></div><div class="bal-rest"></div></div>
-      </div>`;
-    }
+  if (!stage.dataset.built) {
+    stage.dataset.built = "1";
+    stage.innerHTML = `<div class="ring-wrap">
+      <svg class="ring" viewBox="0 0 200 200" aria-hidden="true">
+        <circle class="ring-bg" cx="100" cy="100" r="86"/>
+        <circle class="ring-fg" id="ringFg" cx="100" cy="100" r="86" pathLength="100" stroke-dasharray="100" stroke-dashoffset="100"/>
+      </svg>
+      <div class="ring-txt"><span class="kbig" id="heroKcal">0</span><span class="klbl" id="heroSub"></span></div>
+    </div>`;
   }
-
   animateNumber($("heroKcal"), t.kcal);
-  $("heroModeLabel").textContent = HERO_NAMES[App.state.heroStyle];
-  const sub = $("heroSub");
-
-  if (mode === "capsula") {
-    sub.textContent = `DE ${g.kcal} KCAL`;
-    const w = $("capWater");
-    w.style.height = pct * 100 + "%";
-    w.querySelectorAll(".cap-fill").forEach((f) => f.style.background = over ? "linear-gradient(180deg,#FB7185,#E11D48)" : "linear-gradient(180deg,#FF8A00,#FF5A3C)");
-  } else if (mode === "bateria") {
-    sub.textContent = `/ ${g.kcal}`;
-    const cells = $("batCells").children, on = Math.round(pct * cells.length);
-    [...cells].forEach((c, i) => setTimeout(() => { c.classList.toggle("on", i < on); c.classList.toggle("hot", over); }, i * 26));
-  } else if (mode === "numero") {
-    sub.textContent = `META ${g.kcal}`;
-    const f = $("numFill");
-    requestAnimationFrame(() => (f.style.width = pct * 100 + "%"));
-  } else if (mode === "torre") {
-    const on = Math.round(pct * 10);
-    sub.textContent = `${on} BLOQUES`;
-    [...$("towerCol").children].forEach((b, i) => setTimeout(() => { b.classList.toggle("on", i < on); b.classList.toggle("hot", over); }, i * 32));
-  } else if (mode === "ecualizador") {
-    sub.textContent = `/ ${g.kcal}`;
-    const bars = $("eqRow").children, on = Math.round(pct * bars.length);
-    [...bars].forEach((b, i) => setTimeout(() => { b.classList.toggle("on", i < on); b.classList.toggle("hot", over); }, i * 24));
-  } else if (mode === "termometro") {
-    sub.textContent = `DE ${g.kcal} KCAL`;
-    $("tlMeta").textContent = `meta ${g.kcal}`;
-    $("tlHalf").textContent = `mitad ${Math.round(g.kcal / 2)}`;
-    const f = $("thermoFill");
-    requestAnimationFrame(() => (f.style.height = pct * 100 + "%"));
-    f.style.background = over ? "linear-gradient(180deg,#FB7185,#E11D48)" : "linear-gradient(180deg,#FF8A00,#FF5A3C)";
-  } else if (mode === "pixeles") {
-    const on = Math.round(pct * 50);
-    sub.textContent = `${on} PÍXELES`;
-    [...$("pixGrid").children].forEach((d, i) => setTimeout(() => { d.classList.toggle("on", i < on); d.classList.toggle("hot", over); }, i * 6));
-  } else {
-    animateNumber($("balRest"), rest);
-    const f = $("balFill");
-    requestAnimationFrame(() => (f.style.width = pct * 100 + "%"));
-    f.style.background = over ? "linear-gradient(90deg,#FB7185,#E11D48)" : "var(--grad)";
-  }
-  return mode;
+  $("heroSub").textContent = `DE ${g.kcal} KCAL`;
+  const fg = $("ringFg");
+  fg.classList.toggle("over", over);
+  requestAnimationFrame(() => fg.setAttribute("stroke-dashoffset", String(100 - pct * 100)));
+  return "ring";
 }
 
 /* macros — la barrita hereda el tema del medidor */
 function renderMacros(t, g, mode) {
-  const theme = MACRO_THEME[mode] || "cls";
+  const theme = "cls";
   const row = $("macrosRow");
   if (row.dataset.theme !== theme) {
     row.dataset.theme = theme;
@@ -432,40 +319,16 @@ function renderHoy() {
   const list = $("mealList");
   list.innerHTML = "";
   $("mealEmpty").hidden = day.meals.length > 0;
-  day.meals.forEach((m) => {
-    // la barra mide cuánto aporta esta comida a tu meta diaria del macro
-    const mr = (k) => {
-      const meta = MACRO_META[k], val = m[k];
-      const pct = Math.min(100, (val / g[k]) * 100);
-      return `<div class="mrow" style="--c:${meta.color};--cbg:${meta.soft}">
-        <span class="mrow-chip">${meta.letter}</span>
-        <span class="mrow-g">${val} g</span>
-        <span class="mrow-track"><span class="mrow-fill" style="width:${pct.toFixed(1)}%"></span></span>
-        <span class="mrow-pct">${Math.round(pct)}%</span>
-      </div>`;
-    };
-    const li = document.createElement("div");
-    li.className = "meal";
-    li.innerHTML = `
-      <div class="meal-top">
-        <div class="meal-emoji">${foodEmoji(m.name)}</div>
-        <div class="meal-info">
-          <div class="meal-name">${esc(m.name)}</div>
-          <div class="meal-time">${m.time || ""}</div>
-        </div>
-        <div class="meal-kcal"><b>${m.kcal}</b><span>kcal</span></div>
-        <div class="meal-acts">
-          <button class="iact" data-edit="${m.id}" aria-label="Editar">
-            <svg width="12" height="12" viewBox="0 0 14 14"><path d="M2 12l1-4 7-7 3 3-7 7Z" stroke="#B06A3A" stroke-width="1.6" fill="none" stroke-linejoin="round"/></svg>
-          </button>
-          <button class="iact del" data-del="${m.id}" aria-label="Eliminar">
-            <svg width="11" height="12" viewBox="0 0 12 14"><path d="M1 3h10M4 3V1h4v2M2.5 3l.8 9.5h5.4L9.5 3" stroke="#E11D48" stroke-width="1.5" fill="none" stroke-linecap="round"/></svg>
-          </button>
-        </div>
-      </div>
-      <div class="mrows">${mr("protein")}${mr("carbs")}${mr("fat")}</div>`;
-    list.appendChild(li);
-  });
+  list.innerHTML = day.meals.map((m) => `
+    <button class="mline" data-edit="${m.id}">
+      <span class="mline-time">${m.time || ""}</span>
+      <span class="mline-main">
+        <span class="mline-name">${esc(m.name)}</span>
+        <span class="mline-mac">P ${m.protein} · C ${m.carbs} · G ${m.fat}</span>
+      </span>
+      <b class="mline-kcal">${m.kcal}</b>
+      <svg width="7" height="12" viewBox="0 0 8 14" aria-hidden="true"><path d="M1 1l6 6-6 6" stroke="currentColor" stroke-width="2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+    </button>`).join("");
 }
 
 function renderWeightCard() {
@@ -502,11 +365,11 @@ function renderWeightCard() {
   const d = pts.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.kg).toFixed(1)}`).join(" ");
   svg.innerHTML = `
     <defs><linearGradient id="gSpark" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#16A34A" stop-opacity=".22"/><stop offset="100%" stop-color="#16A34A" stop-opacity="0"/>
+      <stop offset="0%" stop-color="#F26A21" stop-opacity=".22"/><stop offset="100%" stop-color="#F26A21" stop-opacity="0"/>
     </linearGradient></defs>
     <path d="${d} L${x(pts.length - 1).toFixed(1)},52 L4,52 Z" fill="url(#gSpark)"/>
-    <path d="${d}" fill="none" stroke="#16A34A" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle cx="${x(pts.length - 1).toFixed(1)}" cy="${y(pts.at(-1).kg).toFixed(1)}" r="3.5" fill="#16A34A"/>`;
+    <path d="${d}" fill="none" stroke="#F26A21" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="${x(pts.length - 1).toFixed(1)}" cy="${y(pts.at(-1).kg).toFixed(1)}" r="3.5" fill="#F26A21"/>`;
 }
 
 /* ==========================================================
@@ -514,10 +377,10 @@ function renderWeightCard() {
    ========================================================== */
 let chartMetric = "kcal";
 const METRICS = {
-  kcal: { name: "Calorías", color: "#FF8A00", soft: "#FFE0C2", unit: "kcal" },
-  protein: { name: "Proteína", color: "#7C3AED", soft: "#E4D9FB", unit: "g" },
-  carbs: { name: "Carbos", color: "#D97706", soft: "#FBE6C4", unit: "g" },
-  fat: { name: "Grasa", color: "#E11D48", soft: "#FAD4DC", unit: "g" },
+  kcal: { name: "Calorías", color: "#F7892F", soft: "#FFE0C2", unit: "kcal" },
+  protein: { name: "Proteína", color: "#2B3035", soft: "#E3E4E5", unit: "g" },
+  carbs: { name: "Carbos", color: "#F26A21", soft: "#FCE1D0", unit: "g" },
+  fat: { name: "Grasa", color: "#B8875A", soft: "#F1E4D7", unit: "g" },
 };
 
 function renderWeightChart() {
@@ -543,8 +406,8 @@ function renderWeightChart() {
   if (series.length === 1) {
     const p = series[0];
     svg.innerHTML = `
-      <circle cx="${W / 2}" cy="${H / 2}" r="11" fill="#16A34A" opacity=".2" style="transform-origin:${W / 2}px ${H / 2}px;animation:pointPing 1.8s ease-out infinite"/>
-      <circle cx="${W / 2}" cy="${H / 2}" r="6" fill="#16A34A" stroke="#fff" stroke-width="2.5"/>`;
+      <circle cx="${W / 2}" cy="${H / 2}" r="11" fill="#F26A21" opacity=".2" style="transform-origin:${W / 2}px ${H / 2}px;animation:pointPing 1.8s ease-out infinite"/>
+      <circle cx="${W / 2}" cy="${H / 2}" r="6" fill="#F26A21" stroke="#fff" stroke-width="2.5"/>`;
     labels.innerHTML = `<span>${App.formatDate(p.key)}</span><b>${App.fmtWeight(p.kg)}</b>`;
     $("weightRange").textContent = "primer registro ✓";
     return;
@@ -555,16 +418,16 @@ function renderWeightChart() {
   const last = series.at(-1);
   svg.innerHTML = `
     <defs><linearGradient id="gPeso" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#16A34A" stop-opacity=".28"/><stop offset="100%" stop-color="#16A34A" stop-opacity="0"/>
+      <stop offset="0%" stop-color="#F26A21" stop-opacity=".28"/><stop offset="100%" stop-color="#F26A21" stop-opacity="0"/>
     </linearGradient></defs>
     <line x1="0" y1="40" x2="330" y2="40" stroke="#F3E3D2" stroke-width="1"/>
     <line x1="0" y1="80" x2="330" y2="80" stroke="#F3E3D2" stroke-width="1"/>
     <line x1="0" y1="120" x2="330" y2="120" stroke="#F3E3D2" stroke-width="1"/>
     <path d="${area}" fill="url(#gPeso)"/>
-    <polyline points="${pts}" fill="none" stroke="#16A34A" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="600" style="animation:drawLine 1.8s ease-out both"/>
-    ${series.slice(0, -1).map((p) => `<circle cx="${x(p.key).toFixed(1)}" cy="${y(p.kg).toFixed(1)}" r="4" fill="#fff" stroke="#16A34A" stroke-width="2.5"><title>${App.formatDate(p.key)}: ${App.fmtWeight(p.kg)}</title></circle>`).join("")}
-    <circle cx="${x(last.key).toFixed(1)}" cy="${y(last.kg).toFixed(1)}" r="9" fill="#16A34A" opacity=".25" style="transform-origin:${x(last.key).toFixed(1)}px ${y(last.kg).toFixed(1)}px;animation:pointPing 1.8s ease-out infinite"/>
-    <circle cx="${x(last.key).toFixed(1)}" cy="${y(last.kg).toFixed(1)}" r="5.5" fill="#16A34A" stroke="#fff" stroke-width="2.5"><title>${App.formatDate(last.key)}: ${App.fmtWeight(last.kg)}</title></circle>`;
+    <polyline points="${pts}" fill="none" stroke="#F26A21" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="600" style="animation:drawLine 1.8s ease-out both"/>
+    ${series.slice(0, -1).map((p) => `<circle cx="${x(p.key).toFixed(1)}" cy="${y(p.kg).toFixed(1)}" r="4" fill="#fff" stroke="#F26A21" stroke-width="2.5"><title>${App.formatDate(p.key)}: ${App.fmtWeight(p.kg)}</title></circle>`).join("")}
+    <circle cx="${x(last.key).toFixed(1)}" cy="${y(last.kg).toFixed(1)}" r="9" fill="#F26A21" opacity=".25" style="transform-origin:${x(last.key).toFixed(1)}px ${y(last.kg).toFixed(1)}px;animation:pointPing 1.8s ease-out infinite"/>
+    <circle cx="${x(last.key).toFixed(1)}" cy="${y(last.kg).toFixed(1)}" r="5.5" fill="#F26A21" stroke="#fff" stroke-width="2.5"><title>${App.formatDate(last.key)}: ${App.fmtWeight(last.kg)}</title></circle>`;
 
   const step = Math.max(1, Math.floor(series.length / 5));
   const marks = series.filter((_, i) => i % step === 0).slice(0, 5);
@@ -647,7 +510,7 @@ function renderConfig() {
   }
 
   const rows = $("goalRows");
-  const defs = [["kcal", "Calorías", "#FF8A00", 50], ["protein", "Proteína (g)", "#7C3AED", 5], ["carbs", "Carbos (g)", "#D97706", 5], ["fat", "Grasa (g)", "#E11D48", 5]];
+  const defs = [["kcal", "Calorías", "#F7892F", 50], ["protein", "Proteína (g)", "#2B3035", 5], ["carbs", "Carbos (g)", "#F26A21", 5], ["fat", "Grasa (g)", "#B8875A", 5]];
   rows.innerHTML = defs.map(([k, name, c, stp]) => `
     <div class="goal-row">
       <span class="goal-dot" style="--c:${c}"></span>
@@ -785,10 +648,12 @@ function mealSheet(existing) {
       <label class="pbox"><span class="pbox-k">CARBOS (G)</span><input class="pbox-v" id="fmCarb" type="number" min="0" value="${m.carbs}" placeholder="0"></label>
       <label class="pbox"><span class="pbox-k">GRASA (G)</span><input class="pbox-v" id="fmFat" type="number" min="0" value="${m.fat}" placeholder="0"></label>
     </div>
-    <div class="sh-btns"><button class="sh-btn" id="fmCancel">Cancelar</button><button class="sh-btn primary" id="fmSave">${existing ? "GUARDAR" : "AGREGAR"}</button></div>`,
+    <div class="sh-btns"><button class="sh-btn" id="fmCancel">Cancelar</button><button class="sh-btn primary" id="fmSave">${existing ? "GUARDAR" : "AGREGAR"}</button></div>
+    ${existing ? `<button class="sh-link center" id="fmDel">Eliminar esta comida</button>` : ""}`,
     (box) => {
       box.querySelector("#fmName").focus();
       box.querySelector("#fmCancel").onclick = closeSheet;
+      if (existing) box.querySelector("#fmDel").onclick = () => { App.deleteMealById(existing.id); closeSheet(); toast("Comida eliminada 🗑️"); };
       box.querySelector("#fmSave").onclick = () => {
         const d = {
           name: box.querySelector("#fmName").value.trim() || "Comida",
@@ -812,7 +677,7 @@ function weightSheet() {
   openSheet(`
     <div class="sh-head">
       <div class="sh-icon green">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 20V9l8-5 8 5v11" stroke="#16A34A" stroke-width="2" stroke-linejoin="round"/><path d="M8 20v-6h8v6" stroke="#16A34A" stroke-width="2" stroke-linejoin="round"/><path d="M9.5 11.5L12 9l2.5 2.5" stroke="#16A34A" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 20V9l8-5 8 5v11" stroke="#F26A21" stroke-width="2" stroke-linejoin="round"/><path d="M8 20v-6h8v6" stroke="#F26A21" stroke-width="2" stroke-linejoin="round"/><path d="M9.5 11.5L12 9l2.5 2.5" stroke="#F26A21" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
       <div><div class="sh-title">Registrar peso</div>
       <div class="sh-sub">${App.formatDate(App.state.currentDate, { weekday: "long", day: "numeric", month: "long" })}</div></div>
@@ -833,7 +698,7 @@ function weightSheet() {
     (box) => {
       const input = box.querySelector("#wVal");
       const ticks = box.querySelector("#wTicks"), lbls = box.querySelector("#wLbls"), lastEl = box.querySelector("#wLast");
-      ticks.innerHTML = Array.from({ length: 17 }, (_, i) => `<i style="height:${i % 4 === 0 ? 14 : 8}px;background:${i === 8 ? "#16A34A" : "#F0D9C0"}"></i>`).join("");
+      ticks.innerHTML = Array.from({ length: 17 }, (_, i) => `<i style="height:${i % 4 === 0 ? 14 : 8}px;background:${i === 8 ? "#F26A21" : "#D9D4CC"}"></i>`).join("");
 
       const paint = () => {
         const v = +input.value || 0, s = unit === "lb" ? 0.8 : 0.4;
@@ -843,7 +708,7 @@ function weightSheet() {
           const diff = App.kgToUnit(App.unitToKg(v) - latest.kg);
           const days = Math.round((new Date(App.state.currentDate) - new Date(latest.key)) / 86400000);
           lastEl.innerHTML = `<div class="last-rec"><span>último registro <b>${App.fmtWeight(latest.kg)}</b>${days > 0 ? ` · hace ${days} día${days === 1 ? "" : "s"}` : ""}</span>
-            <span class="d" style="color:${diff <= 0 ? "#16A34A" : "#D97706"}">${diff <= 0 ? "▼" : "▲"} ${Math.abs(diff).toFixed(1)}</span></div>`;
+            <span class="d" style="color:${diff <= 0 ? "#2B3035" : "#D95A0F"}">${diff <= 0 ? "▼" : "▲"} ${Math.abs(diff).toFixed(1)}</span></div>`;
         }
       };
       const bump = (d) => { input.value = (Math.max(1, (+input.value || 0) + d)).toFixed(1); paint(); };
@@ -1118,17 +983,6 @@ function renderEat() {
       <span class="pcard-go">pesar →</span>
     </button>`).join("")
     + `<button class="pcard pcard-new" id="eatNewCard"><span class="pcard-emo">🏷️</span><b>${prods.length ? "Nuevo producto" : "Escanea tu primer producto"}</b><i>foto de la etiqueta</i></button>`;
-
-  const meals = App.currentDay().meals;
-  $("eatTimeline").innerHTML = meals.length
-    ? meals.slice().reverse().map((m) => `
-      <div class="tl-item">
-        <span class="tl-time">${m.time || ""}</span>
-        <span class="tl-dot"></span>
-        <span class="tl-name">${esc(m.name)}</span>
-        <b class="tl-kcal">${m.kcal}</b>
-      </div>`).join("")
-    : `<div class="empty">Nada registrado todavía.<br>Escanea un producto o toma foto del plato.</div>`;
 }
 
 /* ---------- hoja: API key ---------- */
@@ -1271,14 +1125,6 @@ function bindEvents() {
   $("dateInput").onchange = (e) => e.target.value && App.setDate(e.target.value);
   $("datePill").onclick = () => { try { $("dateInput").showPicker(); } catch {} };
 
-  $("heroSwitch").onclick = () => {
-    const order = ["auto", ...HERO_MODES];
-    App.state.heroStyle = order[(order.indexOf(App.state.heroStyle) + 1) % order.length];
-    App.save();
-    $("heroStage").dataset.mode = "";
-    renderHoy();
-    toast(`Estilo: ${HERO_NAMES[App.state.heroStyle]}${App.state.heroStyle === "auto" ? " (rota cada día)" : ""}`);
-  };
 
   $("macrosRow").onclick = (e) => {
     const k = e.target.closest(".macro")?.dataset.macro;
@@ -1291,17 +1137,11 @@ function bindEvents() {
   $("addMealBtn").onclick = () => mealSheet();
   $("mealList").onclick = (e) => {
     const ed = e.target.closest("[data-edit]")?.dataset.edit;
-    const dl = e.target.closest("[data-del]")?.dataset.del;
-    if (ed) { const m = App.currentDay().meals.find((x) => x.id === +ed); if (m) mealSheet(m); }
-    if (dl) {
-      const li = e.target.closest(".meal");
-      li.classList.add("removing");
-      setTimeout(() => { App.deleteMealById(+dl); toast("Comida eliminada 🗑️"); }, 220);
-    }
+    const m = ed && App.currentDay().meals.find((x) => String(x.id) === ed);
+    if (m) mealSheet(m);
   };
 
   $("btnLabel").onclick = (e) => { e.stopPropagation(); pickPhoto("label"); };
-  $("goEat").onclick = () => switchView("comer");
   $("eatAll").onclick = () => productsSheet();
   $("eatManual").onclick = () => mealSheet();
   $("eatProducts").onclick = (e) => {

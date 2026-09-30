@@ -3,19 +3,19 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
-  <meta name="theme-color" content="#FFF9F2">
+  <meta name="theme-color" content="#F3F1ED">
   <title>JimmiteoBot · Tu coach de nutrición con IA</title>
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
-  <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=15">
+  <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+  <link rel="stylesheet" href="styles.css?v=16">
   <link rel="manifest" href="manifest.json">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-status-bar-style" content="default">
   <meta name="apple-mobile-web-app-title" content="JimmiteoBot">
   <link rel="apple-touch-icon" href="apple-touch-icon.png">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='3' y='6' width='18' height='14' rx='5' fill='%23FF5A3C'/><circle cx='9' cy='13' r='2' fill='%23FFF9F2'/><circle cx='15' cy='13' r='2' fill='%23FFF9F2'/><rect x='11' y='2' width='2' height='4' rx='1' fill='%23FF8A00'/></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 24 24'><rect x='3' y='6' width='18' height='14' rx='5' fill='%23F26A21'/><circle cx='9' cy='13' r='2' fill='%23F3F1ED'/><circle cx='15' cy='13' r='2' fill='%23F3F1ED'/><rect x='11' y='2' width='2' height='4' rx='1' fill='%23F7892F'/></svg>">
 </head>
 <body>
   <!-- fondo: blobs cítricos + burbujitas -->
@@ -40,16 +40,16 @@
         </div>
         <div class="hd-nav">
           <button class="navbtn" id="prevDay" aria-label="Día anterior">
-            <svg width="8" height="12" viewBox="0 0 8 14"><path d="M7 1L1 7l6 6" stroke="#FF5A3C" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg width="8" height="12" viewBox="0 0 8 14"><path d="M7 1L1 7l6 6" stroke="#F26A21" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
           <button class="datepill" id="datePill">
-            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="2.5" width="12" height="10.5" rx="2.5" stroke="#FF5A3C" stroke-width="1.6"/><path d="M1 6h12" stroke="#FF5A3C" stroke-width="1.6"/><path d="M4.5 1v2.5M9.5 1v2.5" stroke="#FF5A3C" stroke-width="1.6" stroke-linecap="round"/></svg>
+            <svg width="14" height="14" viewBox="0 0 14 14" fill="none"><rect x="1" y="2.5" width="12" height="10.5" rx="2.5" stroke="#F26A21" stroke-width="1.6"/><path d="M1 6h12" stroke="#F26A21" stroke-width="1.6"/><path d="M4.5 1v2.5M9.5 1v2.5" stroke="#F26A21" stroke-width="1.6" stroke-linecap="round"/></svg>
             <span id="dateLabel">hoy</span>
-            <svg width="9" height="6" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="#C4A183" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg width="9" height="6" viewBox="0 0 10 6"><path d="M1 1l4 4 4-4" stroke="#A5A9AD" stroke-width="1.8" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
             <input type="date" id="dateInput" aria-label="Cambiar fecha">
           </button>
           <button class="navbtn" id="nextDay" aria-label="Día siguiente">
-            <svg width="8" height="12" viewBox="0 0 8 14"><path d="M1 1l6 6-6 6" stroke="#FFB48A" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
+            <svg width="8" height="12" viewBox="0 0 8 14"><path d="M1 1l6 6-6 6" stroke="#F4B489" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
         </div>
         <div class="streak" id="streakChip" hidden>🔥 <b id="streakDays">0</b> días</div>
@@ -60,10 +60,6 @@
         <div class="hero-head">
           <span class="hero-eyebrow">CALORÍAS DE HOY</span>
           <span class="hero-rule"></span>
-          <button class="hero-switch" id="heroSwitch">
-            <svg width="11" height="11" viewBox="0 0 12 12" fill="none"><path d="M1.5 6a4.5 4.5 0 0 1 7.7-3.2M10.5 6a4.5 4.5 0 0 1-7.7 3.2" stroke="#FF5A3C" stroke-width="1.6" stroke-linecap="round"/><path d="M9 1v2.2H6.8M3 11V8.8h2.2" stroke="#FF5A3C" stroke-width="1.6" stroke-linecap="round" stroke-linejoin="round"/></svg>
-            <span id="heroModeLabel">Cápsula</span>
-          </button>
         </div>
         <div class="hero-canvas" id="heroStage"></div>
         <div class="dataline">
@@ -88,13 +84,6 @@
           Registrar peso de hoy
         </button>
       </section>
-
-      <!-- acceso a registrar -->
-      <button class="eat-cta" id="goEat">
-        <span class="eat-cta-ico">🍽️</span>
-        <span class="eat-cta-txt"><b>Registrar comida</b><i>escanea un producto o toma foto del plato</i></span>
-        <span class="eat-cta-arr">→</span>
-      </button>
 
       <!-- comidas -->
       <section class="meals">
@@ -144,8 +133,8 @@
       <input type="file" id="photoInput" accept="image/*" hidden>
       <section class="eat-head">
         <div>
-          <div class="eat-eyebrow">REGISTRAR COMIDA</div>
-          <h2 class="eat-title">¿Qué vas a comer?</h2>
+          <div class="eat-eyebrow label">REGISTRAR COMIDA</div>
+          <h2 class="eat-title">¿Qué vas a<br><em>comer?</em></h2>
         </div>
         <div class="eat-left"><b id="eatLeft">0</b><span id="eatLeftLbl">kcal libres hoy</span></div>
       </section>
@@ -163,7 +152,7 @@
         <button class="eat-tile plate" id="btnPlate">
           <span class="eat-badge">ESTIMADO</span>
           <span class="eat-ico">
-            <svg width="30" height="30" viewBox="0 0 30 30" fill="none"><rect x="3" y="8" width="24" height="17" rx="5" stroke="#E2540F" stroke-width="2.4"/><path d="M10 8l2-4h6l2 4" stroke="#E2540F" stroke-width="2.4" stroke-linejoin="round"/><circle cx="15" cy="16.5" r="4.5" stroke="#FF8A00" stroke-width="2.4"/></svg>
+            <svg width="30" height="30" viewBox="0 0 30 30" fill="none"><rect x="3" y="8" width="24" height="17" rx="5" stroke="#D95A0F" stroke-width="2.4"/><path d="M10 8l2-4h6l2 4" stroke="#D95A0F" stroke-width="2.4" stroke-linejoin="round"/><circle cx="15" cy="16.5" r="4.5" stroke="#F7892F" stroke-width="2.4"/></svg>
           </span>
           <b>Foto del plato</b>
           <i>cuando comes fuera</i>
@@ -175,10 +164,7 @@
         <div class="eat-carousel" id="eatProducts"></div>
       </section>
 
-      <section class="eat-sec">
-        <div class="eat-sec-head"><h3>Hoy comiste</h3><button class="eat-link" id="eatManual">+ a mano</button></div>
-        <div class="eat-timeline" id="eatTimeline"></div>
-      </section>
+      <button class="eat-manual" id="eatManual">¿Sin etiqueta ni foto? <b>Registrar a mano →</b></button>
     </main>
 
     <main class="view view-bot" id="view-bot">
@@ -215,19 +201,11 @@
 
     <!-- ============ AJUSTES ============ -->
     <main class="view" id="view-config">
-      <h2 class="page-title">Ajustes</h2>
+      <h2 class="page-title">Ajus<em>tes</em></h2>
 
       <section class="card">
-        <div class="seg-row">
-          <div class="seg-col">
-            <div class="seg-k">PESO</div>
-            <div class="seg" id="segWeight"><button data-u="kg" class="seg-btn on">kg</button><button data-u="lb" class="seg-btn">lb</button></div>
-          </div>
-          <div class="seg-col">
-            <div class="seg-k">ALTURA</div>
-            <div class="seg" id="segHeight"><button data-u="cm" class="seg-btn on">cm</button><button data-u="ft" class="seg-btn">ft/in</button></div>
-          </div>
-        </div>
+        <div class="card-title">Metas diarias</div>
+        <div id="goalRows"></div>
       </section>
 
       <section class="card">
@@ -262,15 +240,21 @@
         <div class="sug" id="tdeeHint"></div>
       </section>
 
-      <section class="card">
-        <div class="card-title">Metas diarias</div>
-        <div id="goalRows"></div>
-      </section>
 
-      <section class="card">
-        <div class="card-title">API y datos</div>
+      <details class="card adv">
+        <summary class="card-title">Avanzado <span>unidades, API y datos</span></summary>
+        <div class="seg-row">
+          <div class="seg-col">
+            <div class="seg-k">PESO</div>
+            <div class="seg" id="segWeight"><button data-u="kg" class="seg-btn on">kg</button><button data-u="lb" class="seg-btn">lb</button></div>
+          </div>
+          <div class="seg-col">
+            <div class="seg-k">ALTURA</div>
+            <div class="seg" id="segHeight"><button data-u="cm" class="seg-btn on">cm</button><button data-u="ft" class="seg-btn">ft/in</button></div>
+          </div>
+        </div>
         <div class="api-row" id="apiRow">
-          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="5.5" cy="10.5" r="3.5" stroke="#B06A3A" stroke-width="1.8"/><path d="M8 8l6-6M11 5l2 2M9 7l1.6 1.6" stroke="#B06A3A" stroke-width="1.8" stroke-linecap="round"/></svg>
+          <svg width="16" height="16" viewBox="0 0 16 16" fill="none"><circle cx="5.5" cy="10.5" r="3.5" stroke="#3A3F44" stroke-width="1.8"/><path d="M8 8l6-6M11 5l2 2M9 7l1.6 1.6" stroke="#3A3F44" stroke-width="1.8" stroke-linecap="round"/></svg>
           <span class="api-key" id="apiKeyMask">sin configurar</span>
           <span class="api-edit">Editar</span>
         </div>
@@ -281,7 +265,7 @@
           <input type="file" id="importInput" accept="application/json" hidden>
         </div>
         <button class="dbtn" id="resetBtn">Borrar todos los datos</button>
-      </section>
+      </details>
     </main>
 
     <!-- nav inferior -->
@@ -307,7 +291,7 @@
         <span>Bot</span><i class="tab-ind"></i><i class="tab-glow"></i>
       </button>
       <button class="tab" data-view="config">
-        <svg class="tab-ico" width="24" height="24" viewBox="0 0 24 24" fill="none"><line x1="4" y1="7" x2="20" y2="7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="15" cy="7" r="2.4" fill="#FFF9F2" stroke="currentColor" stroke-width="2"/><line x1="4" y1="16" x2="20" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="9" cy="16" r="2.4" fill="#FFF9F2" stroke="currentColor" stroke-width="2"/></svg>
+        <svg class="tab-ico" width="24" height="24" viewBox="0 0 24 24" fill="none"><line x1="4" y1="7" x2="20" y2="7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="15" cy="7" r="2.4" fill="#F3F1ED" stroke="currentColor" stroke-width="2"/><line x1="4" y1="16" x2="20" y2="16" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="9" cy="16" r="2.4" fill="#F3F1ED" stroke="currentColor" stroke-width="2"/></svg>
         <span>Ajustes</span><i class="tab-ind"></i>
       </button>
     </nav>
@@ -320,8 +304,8 @@
 
   <div class="toast" id="toast" hidden></div>
 
-  <script src="knowledge.js?v=15"></script>
-  <script src="bot.js?v=15"></script>
-  <script src="app.js?v=15"></script>
+  <script src="knowledge.js?v=16"></script>
+  <script src="bot.js?v=16"></script>
+  <script src="app.js?v=16"></script>
 </body>
 </html>
