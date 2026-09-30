@@ -243,7 +243,11 @@ function systemPrompt() {
   const books = KNOWLEDGE.books.map((b) => `- "${b.title}" — ${b.author} (${b.year}): ${b.why}`).join("\n");
   const videos = KNOWLEDGE.videos.map((v) => `- "${v.title}" — ${v.source}: ${v.why}`).join("\n");
   const tips = KNOWLEDGE.tips.map((t) => `- ${t.text} (Fuente: ${t.source})`).join("\n");
-  return `Eres ${APP_NAME}, el coach de nutrición y salud dentro de la app ${APP_NAME}. Hablas español, eres cercano, motivador y breve (2-5 frases, usa emojis con moderación).
+  const persona = window.APP?.bot
+    ? `Eres ${BOT_NAME}, un Australian Shepherd red merle (un ojo marrón y uno azul) que es el coach de nutrición y salud dentro de la app ${APP_NAME}. Eres tierno y leal; de vez en cuando se te escapa un detalle perruno (🐾), sin exagerar.`
+    : `Eres ${APP_NAME}, el coach de nutrición y salud dentro de la app ${APP_NAME}.`;
+  const langRule = I18N.en ? " IMPORTANTE: responde SIEMPRE en inglés (English), aunque las instrucciones estén en español; los nombres de comidas que registres también en inglés." : "";
+  return `${persona}${langRule} Hablas español, eres cercano, motivador y breve (2-5 frases, usa emojis con moderación).
 
 Puedes EDITAR la app con tus herramientas: registrar/eliminar comidas, registrar el peso corporal, cambiar metas, calcular macros automáticamente desde el perfil y cambiar la fecha activa. Úsalas siempre que el usuario lo pida, sin pedir confirmación para acciones simples. Si pregunta cuántas calorías o macros debería comer, usa calculate_macros.
 
@@ -331,7 +335,7 @@ async function askClaude(userText, onAction) {
 /* ---------- Foto de plato → estimación desglosada (1 llamada) ---------- */
 // prev + comments: re-estimación cuando el usuario corrige («creo que es menos papas»)
 async function estimateMealPhoto(base64jpeg, note = "", grams = 0, prev = null, comments = []) {
-  let text = "Analiza esta foto de comida con cuidado. Desglosa cada componente, estima porciones realistas, revisa tu desglose y da el total. Devuélvelo con estimate_meal. Si no es comida, is_food false."
+  let text = (I18N.en ? "Write name, food names and review in English. " : "") + "Analiza esta foto de comida con cuidado. Desglosa cada componente, estima porciones realistas, revisa tu desglose y da el total. Devuélvelo con estimate_meal. Si no es comida, is_food false."
     + (grams ? `\n\nEl usuario pesó la comida ya servida: ${grams} g netos en total. Tus gramos por componente deben sumar ${grams} g; usa valores USDA de alimentos cocidos.` : "")
     + (note ? `\n\nDetalles del usuario (tenlos muy en cuenta): ${note}` : "");
   if (prev) {
@@ -361,7 +365,7 @@ async function readNutritionLabel(base64jpeg) {
     role: "user",
     content: [
       { type: "image", source: { type: "base64", media_type: "image/jpeg", data: base64jpeg } },
-      { type: "text", text: "Esta es la foto de una tabla de información nutricional (Nutrition Facts). Lee los valores EXACTOS que aparecen, no estimes. Primero transcribe, luego revisa cada número contra la foto, y solo entonces da los valores. Prefiere la columna por 100 g si existe; si no, usa el tamaño de porción en gramos. Indica si describe el producto crudo/seco o listo para comer. Devuélvelo con read_label." },
+      { type: "text", text: "Esta es la foto de una tabla de información nutricional (Nutrition Facts). Lee los valores EXACTOS que aparecen, no estimes. Primero transcribe, luego revisa cada número contra la foto, y solo entonces da los valores. Prefiere la columna por 100 g si existe; si no, usa el tamaño de porción en gramos. Indica si describe el producto crudo/seco o listo para comer. Devuélvelo con read_label." + (I18N.en ? " Write name, unit_name, review and note in English." : "") },
     ],
   }];
   const response = await claudeRequest(messages, { tools: [LABEL_TOOL], tool_choice: { type: "tool", name: "read_label" }, max_tokens: 2048 });
@@ -505,7 +509,7 @@ function localBot(text) {
   // Saludo
   if (/^(hola|hey|buenas|hi|holi)/.test(t)) {
     const name = App.state.profile.nombre;
-    return reply(`¡Hola${name ? " " + name : ""}! 👋 Soy ${APP_NAME}. Puedo registrar tus comidas, calcular y cambiar tus metas, y recomendarte libros y videos verificados de salud. ¿En qué te ayudo?`);
+    return reply(`¡Hola${name ? " " + name : ""}! 👋 Soy ${BOT_NAME}. Puedo registrar tus comidas, calcular y cambiar tus metas, y recomendarte libros y videos verificados de salud. ¿En qué te ayudo?`);
   }
 
   // Fallback

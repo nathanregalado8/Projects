@@ -4,10 +4,16 @@
 // nombre y almacenamiento por versión de la app (index.html define window.APP)
 const STORE_KEY = window.APP?.store || "jimmiteobot_v2";
 const APP_NAME = window.APP?.name || "JimmiteoBot";
+const BOT_NAME = window.APP?.bot || APP_NAME;
+const ACCENT = window.APP?.accent || "#F26A21";
 
 /* ---------- frases del día (solo versiones con APP.notes, ej. Tiff Fit) ---------- */
 const Notes = {
   on: !!window.APP?.notes && typeof FRASES_MOTIVACION !== "undefined",
+  // mismas frases en inglés (mismo orden) cuando la app está en inglés
+  get M() { return I18N.en && typeof FRASES_MOTIVACION_EN !== "undefined" ? FRASES_MOTIVACION_EN : FRASES_MOTIVACION; },
+  get A() { return I18N.en && typeof FRASES_AMOR_EN !== "undefined" ? FRASES_AMOR_EN : FRASES_AMOR; },
+  get V() { return I18N.en && typeof FRASES_VERSICULOS_EN !== "undefined" ? FRASES_VERSICULOS_EN : FRASES_VERSICULOS; },
   sign: `— ${window.APP?.firma || ""}`.trim(),
   // orden barajado fijo: cada día cambia y no se repite hasta dar la vuelta
   perm(n, seed) {
@@ -19,18 +25,28 @@ const Notes = {
   },
   day() { return Math.floor(new Date(App.todayKey() + "T12:00:00").getTime() / 86400000); },
   love(offset = 0) {
-    this._pa ||= this.perm(FRASES_AMOR.length, 7);
-    return FRASES_AMOR[this._pa[(this.day() + offset) % FRASES_AMOR.length]];
+    this._pa ||= this.perm(this.A.length, 7);
+    return this.A[this._pa[(this.day() + offset) % this.A.length]];
   },
   // varias frases de motivación por día (slot 0, 1, 2…)
   motiv(slot = 0) {
-    this._pm ||= this.perm(FRASES_MOTIVACION.length, 13);
-    return FRASES_MOTIVACION[this._pm[(this.day() * 3 + slot) % FRASES_MOTIVACION.length]];
+    this._pm ||= this.perm(this.M.length, 13);
+    return this.M[this._pm[(this.day() * 3 + slot) % this.M.length]];
+  },
+  verses: !!window.APP?.verses && typeof FRASES_VERSICULOS !== "undefined",
+  verse(slot = 0) {
+    this._pv ||= this.perm(this.V.length, 21);
+    return this.V[this._pv[(this.day() * 2 + slot) % this.V.length]];
   },
   random(list) { return list[Math.floor(Math.random() * list.length)]; },
 };
+const verseHTML = ([t, ref]) => `«${esc(t)}»<cite>${esc(ref)}</cite>`;
 
 function renderNotes() {
+  if (Notes.verses) {
+    for (const [id, slot] of [["verseHoy", 0], ["verseLog", 1]]) { $(id).hidden = false; $(id).innerHTML = verseHTML(Notes.verse(slot)); }
+    $("botStatus").innerHTML = `«${esc(Notes.verse(0)[0])}»`;
+  }
   if (!Notes.on) return;
   $("loveNote").hidden = false;
   if (!$("loveText").dataset.custom) $("loveText").textContent = Notes.love();
@@ -47,8 +63,8 @@ function cheer() {
   if (!Notes.on) return;
   clearTimeout(cheerTimer);
   // sin frases de «buenos días / primera comida», que no cuadran a cualquier hora
-  const any = FRASES_MOTIVACION.filter((f) => !/primera comida|buenos días|arranca el día|levántate|cierra el día|termina el día/i.test(f));
-  $("cheerText").textContent = Notes.random(Math.random() < .25 ? FRASES_AMOR : any);
+  const any = Notes.M.filter((f) => !/primera comida|buenos días|arranca el día|levántate|cierra el día|termina el día|first meal|good morning|start (your|the) day|wake up|end (your|the) day|finish the day/i.test(f));
+  $("cheerText").textContent = Notes.random(Math.random() < .25 ? Notes.A : any);
   $("cheerSign").textContent = Notes.sign;
   const el = $("cheer");
   el.hidden = false; el.classList.remove("out");
@@ -67,13 +83,17 @@ const DEFAULT_STATE = {
   apiKey: "",
   chat: [],
   products: {},
+  lang: null,
 };
 
+const MACRO_COLORS = window.APP?.macroColors || {};
 const MACRO_META = {
   protein: { key: "Protein", letter: "P", name: "Proteína", color: "#2B3035", soft: "rgba(43,48,53,.10)", grad: "linear-gradient(90deg,#5F656B,#2B3035)" },
   carbs:   { key: "Carbs",   letter: "C", name: "Carbos",   color: "#F26A21", soft: "rgba(242,106,33,.12)", grad: "linear-gradient(90deg,#F7892F,#F26A21)" },
   fat:     { key: "Fat",     letter: "G", name: "Grasa",    color: "#B8875A", soft: "rgba(184,135,90,.14)", grad: "linear-gradient(90deg,#D2A77E,#B8875A)" },
 };
+for (const [k, c] of Object.entries(MACRO_COLORS)) if (MACRO_META[k]) MACRO_META[k].color = c;
+if (I18N.en) MACRO_META.fat.letter = "F";
 
 const App = {
   state: null,
@@ -88,7 +108,7 @@ const App = {
     return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}-${String(d.getDate()).padStart(2, "0")}`;
   },
   formatDate(key, opts = { weekday: "short", day: "numeric", month: "short" }) {
-    return new Date(key + "T12:00:00").toLocaleDateString("es", opts);
+    return new Date(key + "T12:00:00").toLocaleDateString(I18N.locale, opts);
   },
 
   load() {
@@ -202,12 +222,12 @@ const App = {
     if (cooked === undefined) cooked = p.weighed === "cooked";
     const stored = this.state.products[p.id];
     if (stored) { stored.used = Date.now(); if (!stored.ready_to_eat) stored.weighed = cooked ? "cooked" : "raw"; }
-    const tag = p.ready_to_eat ? "" : cooked ? " cocido" : " crudo";
+    const tag = p.ready_to_eat ? "" : cooked ? t(" cocido") : t(" crudo");
     return this.addMeal({ name: `${p.name} · ${label || `${grams} g${tag}`}`.slice(0, 60), ...this.portion(p, grams, cooked) });
   },
   unitLabel(n, name) {
-    const u = name || "unidad";
-    const plural = n === 1 ? u : /[aeiou]$/.test(u) ? u + "s" : u + "es";
+    const u = name || t("unidad");
+    const plural = n === 1 ? u : I18N.en || /[aeiou]$/.test(u) ? u + "s" : u + "es";
     return `${n} ${plural}`;
   },
 
@@ -366,6 +386,7 @@ function renderHoy() {
   $("streakDays").textContent = st;
 
   const mode = renderHero(t, g);
+  document.body.classList.toggle("over", t.kcal > g.kcal);
   renderMacros(t, g, mode);
 
   const rest = g.kcal - t.kcal;
@@ -425,11 +446,11 @@ function renderWeightCard() {
   const d = pts.map((p, i) => `${i ? "L" : "M"}${x(i).toFixed(1)},${y(p.kg).toFixed(1)}`).join(" ");
   svg.innerHTML = `
     <defs><linearGradient id="gSpark" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#F26A21" stop-opacity=".22"/><stop offset="100%" stop-color="#F26A21" stop-opacity="0"/>
+      <stop offset="0%" stop-color="${ACCENT}" stop-opacity=".22"/><stop offset="100%" stop-color="${ACCENT}" stop-opacity="0"/>
     </linearGradient></defs>
     <path d="${d} L${x(pts.length - 1).toFixed(1)},52 L4,52 Z" fill="url(#gSpark)"/>
-    <path d="${d}" fill="none" stroke="#F26A21" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-    <circle cx="${x(pts.length - 1).toFixed(1)}" cy="${y(pts.at(-1).kg).toFixed(1)}" r="3.5" fill="#F26A21"/>`;
+    <path d="${d}" fill="none" stroke="${ACCENT}" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
+    <circle cx="${x(pts.length - 1).toFixed(1)}" cy="${y(pts.at(-1).kg).toFixed(1)}" r="3.5" fill="${ACCENT}"/>`;
 }
 
 /* ==========================================================
@@ -437,11 +458,13 @@ function renderWeightCard() {
    ========================================================== */
 let chartMetric = "kcal";
 const METRICS = {
-  kcal: { name: "Calorías", color: "#F7892F", soft: "#FFE0C2", unit: "kcal" },
-  protein: { name: "Proteína", color: "#2B3035", soft: "#E3E4E5", unit: "g" },
-  carbs: { name: "Carbos", color: "#F26A21", soft: "#FCE1D0", unit: "g" },
-  fat: { name: "Grasa", color: "#B8875A", soft: "#F1E4D7", unit: "g" },
+  kcal: { name: "Calorías", color: ACCENT, soft: "#FFE0C2", unit: "kcal" },
+  protein: { name: "Proteína", color: MACRO_META.protein.color, soft: "#E3E4E5", unit: "g" },
+  carbs: { name: "Carbos", color: MACRO_META.carbs.color, soft: "#FCE1D0", unit: "g" },
+  fat: { name: "Grasa", color: MACRO_META.fat.color, soft: "#F1E4D7", unit: "g" },
 };
+// colores suaves de las gráficas (versiones con su propia paleta)
+for (const [k, c] of Object.entries(window.APP?.softColors || {})) if (METRICS[k]) METRICS[k].soft = c;
 
 function renderWeightChart() {
   const svg = $("weightChart"), labels = $("weightLabels"), empty = $("weightEmpty");
@@ -466,8 +489,8 @@ function renderWeightChart() {
   if (series.length === 1) {
     const p = series[0];
     svg.innerHTML = `
-      <circle cx="${W / 2}" cy="${H / 2}" r="11" fill="#F26A21" opacity=".2" style="transform-origin:${W / 2}px ${H / 2}px;animation:pointPing 1.8s ease-out infinite"/>
-      <circle cx="${W / 2}" cy="${H / 2}" r="6" fill="#F26A21" stroke="#fff" stroke-width="2.5"/>`;
+      <circle cx="${W / 2}" cy="${H / 2}" r="11" fill="${ACCENT}" opacity=".2" style="transform-origin:${W / 2}px ${H / 2}px;animation:pointPing 1.8s ease-out infinite"/>
+      <circle cx="${W / 2}" cy="${H / 2}" r="6" fill="${ACCENT}" stroke="#fff" stroke-width="2.5"/>`;
     labels.innerHTML = `<span>${App.formatDate(p.key)}</span><b>${App.fmtWeight(p.kg)}</b>`;
     $("weightRange").textContent = "primer registro ✓";
     return;
@@ -478,16 +501,16 @@ function renderWeightChart() {
   const last = series.at(-1);
   svg.innerHTML = `
     <defs><linearGradient id="gPeso" x1="0" y1="0" x2="0" y2="1">
-      <stop offset="0%" stop-color="#F26A21" stop-opacity=".28"/><stop offset="100%" stop-color="#F26A21" stop-opacity="0"/>
+      <stop offset="0%" stop-color="${ACCENT}" stop-opacity=".28"/><stop offset="100%" stop-color="${ACCENT}" stop-opacity="0"/>
     </linearGradient></defs>
     <line x1="0" y1="40" x2="330" y2="40" stroke="#F3E3D2" stroke-width="1"/>
     <line x1="0" y1="80" x2="330" y2="80" stroke="#F3E3D2" stroke-width="1"/>
     <line x1="0" y1="120" x2="330" y2="120" stroke="#F3E3D2" stroke-width="1"/>
     <path d="${area}" fill="url(#gPeso)"/>
-    <polyline points="${pts}" fill="none" stroke="#F26A21" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="600" style="animation:drawLine 1.8s ease-out both"/>
-    ${series.slice(0, -1).map((p) => `<circle cx="${x(p.key).toFixed(1)}" cy="${y(p.kg).toFixed(1)}" r="4" fill="#fff" stroke="#F26A21" stroke-width="2.5"><title>${App.formatDate(p.key)}: ${App.fmtWeight(p.kg)}</title></circle>`).join("")}
-    <circle cx="${x(last.key).toFixed(1)}" cy="${y(last.kg).toFixed(1)}" r="9" fill="#F26A21" opacity=".25" style="transform-origin:${x(last.key).toFixed(1)}px ${y(last.kg).toFixed(1)}px;animation:pointPing 1.8s ease-out infinite"/>
-    <circle cx="${x(last.key).toFixed(1)}" cy="${y(last.kg).toFixed(1)}" r="5.5" fill="#F26A21" stroke="#fff" stroke-width="2.5"><title>${App.formatDate(last.key)}: ${App.fmtWeight(last.kg)}</title></circle>`;
+    <polyline points="${pts}" fill="none" stroke="${ACCENT}" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" stroke-dasharray="600" style="animation:drawLine 1.8s ease-out both"/>
+    ${series.slice(0, -1).map((p) => `<circle cx="${x(p.key).toFixed(1)}" cy="${y(p.kg).toFixed(1)}" r="4" fill="#fff" stroke="${ACCENT}" stroke-width="2.5"><title>${App.formatDate(p.key)}: ${App.fmtWeight(p.kg)}</title></circle>`).join("")}
+    <circle cx="${x(last.key).toFixed(1)}" cy="${y(last.kg).toFixed(1)}" r="9" fill="${ACCENT}" opacity=".25" style="transform-origin:${x(last.key).toFixed(1)}px ${y(last.kg).toFixed(1)}px;animation:pointPing 1.8s ease-out infinite"/>
+    <circle cx="${x(last.key).toFixed(1)}" cy="${y(last.kg).toFixed(1)}" r="5.5" fill="${ACCENT}" stroke="#fff" stroke-width="2.5"><title>${App.formatDate(last.key)}: ${App.fmtWeight(last.kg)}</title></circle>`;
 
   const step = Math.max(1, Math.floor(series.length / 5));
   const marks = series.filter((_, i) => i % step === 0).slice(0, 5);
@@ -556,6 +579,7 @@ function renderConfig() {
   $("pActividad").value = p.actividad; $("pRitmo").value = p.ritmo;
 
   document.querySelectorAll("#segWeight .seg-btn").forEach((b) => b.classList.toggle("on", b.dataset.u === u.weight));
+  document.querySelectorAll("#segLang .seg-btn").forEach((b) => b.classList.toggle("on", b.dataset.l === I18N.lang));
   document.querySelectorAll("#segHeight .seg-btn").forEach((b) => b.classList.toggle("on", b.dataset.u === u.height));
   document.querySelectorAll("#segObjetivo .seg-btn").forEach((b) => b.classList.toggle("on", b.dataset.o === p.objetivo));
   document.querySelectorAll(".wUnitLbl").forEach((el) => (el.textContent = u.weight));
@@ -570,7 +594,7 @@ function renderConfig() {
   }
 
   const rows = $("goalRows");
-  const defs = [["kcal", "Calorías", "#F7892F", 50], ["protein", "Proteína (g)", "#2B3035", 5], ["carbs", "Carbos (g)", "#F26A21", 5], ["fat", "Grasa (g)", "#B8875A", 5]];
+  const defs = [["kcal", "Calorías", ACCENT, 50], ["protein", "Proteína (g)", MACRO_META.protein.color, 5], ["carbs", "Carbos (g)", MACRO_META.carbs.color, 5], ["fat", "Grasa (g)", MACRO_META.fat.color, 5]];
   rows.innerHTML = defs.map(([k, name, c, stp]) => `
     <div class="goal-row">
       <span class="goal-dot" style="--c:${c}"></span>
@@ -618,7 +642,7 @@ function ensureTodayThread() {
   App.state.chat.push({
     role: "bot", d: t,
     text: first
-      ? `¡Hola${n ? " " + n : ""}! 👋 Soy tu coach.\n\nPuedo registrar lo que comes y tu peso, calcular tus metas y recomendarte libros y videos verificados. ¿En qué te ayudo?`
+      ? `¡Hola${n ? " " + n : ""}! 👋 Soy ${window.APP?.bot ? BOT_NAME : "tu coach"}.\n\nPuedo registrar lo que comes y tu peso, calcular tus metas y recomendarte libros y videos verificados. ¿En qué te ayudo?`
       : `¡Buenos días${n ? " " + n : ""}! ☀️ Empezamos ${App.formatDate(t, { weekday: "long", day: "numeric", month: "long" })}.\n\nTu historial sigue aquí arriba, así que puedes preguntarme por días anteriores cuando quieras.`,
   });
   App.save();
@@ -738,7 +762,7 @@ function weightSheet() {
   openSheet(`
     <div class="sh-head">
       <div class="sh-icon green">
-        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 20V9l8-5 8 5v11" stroke="#F26A21" stroke-width="2" stroke-linejoin="round"/><path d="M8 20v-6h8v6" stroke="#F26A21" stroke-width="2" stroke-linejoin="round"/><path d="M9.5 11.5L12 9l2.5 2.5" stroke="#F26A21" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
+        <svg width="24" height="24" viewBox="0 0 24 24" fill="none"><path d="M4 20V9l8-5 8 5v11" stroke="${ACCENT}" stroke-width="2" stroke-linejoin="round"/><path d="M8 20v-6h8v6" stroke="${ACCENT}" stroke-width="2" stroke-linejoin="round"/><path d="M9.5 11.5L12 9l2.5 2.5" stroke="${ACCENT}" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"/></svg>
       </div>
       <div><div class="sh-title">Registrar peso</div>
       <div class="sh-sub">${App.formatDate(App.state.currentDate, { weekday: "long", day: "numeric", month: "long" })}</div></div>
@@ -759,7 +783,7 @@ function weightSheet() {
     (box) => {
       const input = box.querySelector("#wVal");
       const ticks = box.querySelector("#wTicks"), lbls = box.querySelector("#wLbls"), lastEl = box.querySelector("#wLast");
-      ticks.innerHTML = Array.from({ length: 17 }, (_, i) => `<i style="height:${i % 4 === 0 ? 14 : 8}px;background:${i === 8 ? "#F26A21" : "#D9D4CC"}"></i>`).join("");
+      ticks.innerHTML = Array.from({ length: 17 }, (_, i) => `<i style="height:${i % 4 === 0 ? 14 : 8}px;background:${i === 8 ? ACCENT : "#D9D4CC"}"></i>`).join("");
 
       const paint = () => {
         const v = +input.value || 0, s = unit === "lb" ? 0.8 : 0.4;
@@ -1153,7 +1177,7 @@ function pushChat(role, text) {
 function showTyping() {
   const d = document.createElement("div");
   d.className = "msg msg-bot"; d.id = "typingMsg";
-  d.innerHTML = `<span class="typing"><i></i><i></i><i></i></span>`;
+  d.innerHTML = `${window.APP?.bot ? '<span class="typing-astro"></span> ' : ""}<span class="typing"><i></i><i></i><i></i></span>`;
   $("chatList").appendChild(d);
   scrollChatToEnd();
 }
@@ -1293,6 +1317,11 @@ function bindEvents() {
 
   $("segChart").onclick = (e) => { const m = e.target.closest(".pill")?.dataset.m; if (m) { chartMetric = m; renderLog(); } };
 
+  // idioma: se guarda y se recarga para que toda la app cambie de una vez
+  $("segLang").onclick = (e) => {
+    const l = e.target.closest(".seg-btn")?.dataset.l; if (!l || l === I18N.lang) return;
+    App.state.lang = l; App.save(); location.reload();
+  };
   $("segWeight").onclick = (e) => {
     const u = e.target.closest(".seg-btn")?.dataset.u; if (!u) return;
     App.state.units.weight = u; App.save(); renderConfig(); renderHoy(); renderLog();
@@ -1407,13 +1436,26 @@ function initBubbles() {
 }
 
 App.load();
-$("botName").textContent = APP_NAME;
+$("botName").textContent = BOT_NAME;
+if (window.APP?.bot) {
+  document.querySelector('.tab[data-view="bot"] span').textContent = BOT_NAME;
+  $("chatText").placeholder = `Escríbele a ${BOT_NAME}…`;
+}
+if (Notes.verses) {
+  // bienvenida: Astro + versículo del día, se va sola
+  $("splashVerse").innerHTML = verseHTML(Notes.verse(0));
+  const sp = $("splash");
+  sp.hidden = false;
+  const bye = () => { sp.classList.add("out"); setTimeout(() => (sp.hidden = true), 500); };
+  sp.onclick = bye;
+  setTimeout(bye, 2600);
+}
 if (Notes.on) {
   // tocar la nota muestra otra (al azar); la del día vuelve mañana
   $("loveNote").onclick = () => {
     const t = $("loveText");
     t.classList.add("swap");
-    setTimeout(() => { t.textContent = Notes.random(FRASES_AMOR.filter((f) => f !== t.textContent)); t.dataset.custom = "1"; t.classList.remove("swap"); }, 180);
+    setTimeout(() => { t.textContent = Notes.random(Notes.A.filter((f) => f !== t.textContent)); t.dataset.custom = "1"; t.classList.remove("swap"); }, 180);
   };
   $("cheer").onclick = () => $("cheer").classList.add("out");
 }

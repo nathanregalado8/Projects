@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Montserrat:wght@600;700;800;900&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=18">
+  <link rel="stylesheet" href="styles.css?v=19">
   <script>window.APP = window.APP || { name: "JimmiteoBot", store: "jimmiteobot_v2" };</script>
   <link rel="manifest" href="manifest.json">
   <meta name="mobile-web-app-capable" content="yes">
@@ -53,7 +53,7 @@
             <svg width="8" height="12" viewBox="0 0 8 14"><path d="M1 1l6 6-6 6" stroke="#F4B489" stroke-width="2.2" fill="none" stroke-linecap="round" stroke-linejoin="round"/></svg>
           </button>
         </div>
-        <div class="streak" id="streakChip" hidden>🔥 <b id="streakDays">0</b> días</div>
+        <div class="streak" id="streakChip" hidden><span class="streak-ico">🔥</span> <b id="streakDays">0</b> días</div>
       </header>
 
       <!-- nota del día (solo versiones con frases) -->
@@ -102,6 +102,7 @@
         <div id="mealList"></div>
         <div class="empty" id="mealEmpty">Aún no registras comidas.<br>Toca <b>Comer</b> abajo, usa <b>+ Agregar</b> o pídeselo al bot.</div>
       </section>
+      <p class="verse" id="verseHoy" hidden></p>
     </main>
 
     <!-- ============ LOG ============ -->
@@ -135,6 +136,7 @@
         <div id="logList"></div>
         <div class="empty" id="logEmpty">Todavía no hay días con registros.</div>
       </section>
+      <p class="verse" id="verseLog" hidden></p>
     </main>
 
     <!-- ============ BOT ============ -->
@@ -190,7 +192,7 @@
         </div>
         <div>
           <div class="bot-name" id="botName">Jimmiteobot</div>
-          <div class="bot-status">en línea · listo para ayudarte</div>
+          <div class="bot-status" id="botStatus">en línea · listo para ayudarte</div>
         </div>
       </div>
       <div class="chat-scroll" id="chatScroll"><div class="chat" id="chatList"></div></div>
@@ -253,6 +255,10 @@
 
       <details class="card adv">
         <summary class="card-title">Avanzado <span>unidades, API y datos</span></summary>
+        <div class="seg-col lang-row">
+          <div class="seg-k">IDIOMA · LANGUAGE</div>
+          <div class="seg" id="segLang"><button data-l="en" class="seg-btn">English</button><button data-l="es" class="seg-btn">Español</button></div>
+        </div>
         <div class="seg-row">
           <div class="seg-col">
             <div class="seg-k">PESO</div>
@@ -283,6 +289,7 @@
       <div class="scan-card"><div class="scan-frame"><i></i></div><span id="photoLoadingTxt">Analizando…</span></div>
     </div>
 
+    <div class="splash" id="splash" hidden><div class="splash-in"><div class="splash-dog"></div><p class="splash-verse" id="splashVerse"></p></div></div>
     <div class="cheer" id="cheer" hidden><span id="cheerText"></span><b id="cheerSign"></b></div>
 
     <nav class="tabbar">
@@ -316,9 +323,10 @@
 
   <div class="toast" id="toast" hidden></div>
 
-  <script src="frases.js?v=18"></script>
-  <script src="knowledge.js?v=18"></script>
-  <script src="bot.js?v=18"></script>
-  <script src="app.js?v=18"></script>
+  <script src="i18n.js?v=19"></script>
+  <script src="frases.js?v=19"></script>
+  <script src="knowledge.js?v=19"></script>
+  <script src="bot.js?v=19"></script>
+  <script src="app.js?v=19"></script>
 </body>
 </html>
