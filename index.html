@@ -8,7 +8,7 @@
   <link rel="preconnect" href="https://fonts.googleapis.com">
   <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
   <link href="https://fonts.googleapis.com/css2?family=Sora:wght@600;700;800&family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
-  <link rel="stylesheet" href="styles.css?v=14">
+  <link rel="stylesheet" href="styles.css?v=15">
   <link rel="manifest" href="manifest.json">
   <meta name="mobile-web-app-capable" content="yes">
   <meta name="apple-mobile-web-app-capable" content="yes">
@@ -89,28 +89,12 @@
         </button>
       </section>
 
-      <!-- foto IA -->
-      <section class="photo">
-        <svg class="spk spk-1" width="16" height="16" viewBox="0 0 16 16"><path d="M8 0l1.8 6.2L16 8l-6.2 1.8L8 16l-1.8-6.2L0 8l6.2-1.8Z" fill="#FF8A00"/></svg>
-        <svg class="spk spk-2" width="10" height="10" viewBox="0 0 16 16"><path d="M8 0l1.8 6.2L16 8l-6.2 1.8L8 16l-1.8-6.2L0 8l6.2-1.8Z" fill="#84CC16"/></svg>
-        <input type="file" id="photoInput" accept="image/*" hidden>
-        <div class="photo-row" id="photoInner">
-          <div class="photo-icon">
-            <svg width="28" height="28" viewBox="0 0 28 28" fill="none"><path d="M4 21h20l-2.5-9h-15L4 21Z" stroke="#FF5A3C" stroke-width="2.2" stroke-linejoin="round"/><path d="M14 12V7m-4 0h8" stroke="#FF8A00" stroke-width="2.2" stroke-linecap="round"/></svg>
-          </div>
-          <div class="photo-txt">
-            <div class="photo-title">Pesa y registra</div>
-            <div class="photo-sub">escanea la etiqueta + pon el peso = macros exactos</div>
-          </div>
-        </div>
-        <div class="photo-btns" id="photoBtns">
-          <button class="pbtn" id="btnLabel">🏷️ ESCANEAR PRODUCTO</button>
-          <button class="pbtn pbtn-alt" id="btnPlate">📸 FOTO DEL PLATO</button>
-        </div>
-        <div class="photo-loading" id="photoLoading" hidden>
-          <div class="spinner"></div><span id="photoLoadingTxt">Analizando tu comida…</span>
-        </div>
-      </section>
+      <!-- acceso a registrar -->
+      <button class="eat-cta" id="goEat">
+        <span class="eat-cta-ico">🍽️</span>
+        <span class="eat-cta-txt"><b>Registrar comida</b><i>escanea un producto o toma foto del plato</i></span>
+        <span class="eat-cta-arr">→</span>
+      </button>
 
       <!-- comidas -->
       <section class="meals">
@@ -119,7 +103,7 @@
           <button class="add-btn" id="addMealBtn">+ Agregar</button>
         </div>
         <div id="mealList"></div>
-        <div class="empty" id="mealEmpty">Aún no registras comidas.<br>Escanea un producto, usa <b>+ Agregar</b> o pídeselo al bot.</div>
+        <div class="empty" id="mealEmpty">Aún no registras comidas.<br>Toca <b>Comer</b> abajo, usa <b>+ Agregar</b> o pídeselo al bot.</div>
       </section>
     </main>
 
@@ -156,6 +140,47 @@
     </main>
 
     <!-- ============ BOT ============ -->
+    <main class="view" id="view-comer">
+      <input type="file" id="photoInput" accept="image/*" hidden>
+      <section class="eat-head">
+        <div>
+          <div class="eat-eyebrow">REGISTRAR COMIDA</div>
+          <h2 class="eat-title">¿Qué vas a comer?</h2>
+        </div>
+        <div class="eat-left"><b id="eatLeft">0</b><span id="eatLeftLbl">kcal libres hoy</span></div>
+      </section>
+      <div class="eat-bar"><i id="eatBarFill"></i></div>
+
+      <div class="eat-actions">
+        <button class="eat-tile scan" id="btnLabel">
+          <span class="eat-badge">EXACTO</span>
+          <span class="eat-ico">
+            <svg width="30" height="30" viewBox="0 0 30 30" fill="none"><path d="M4 9V6a2 2 0 0 1 2-2h3M21 4h3a2 2 0 0 1 2 2v3M26 21v3a2 2 0 0 1-2 2h-3M9 26H6a2 2 0 0 1-2-2v-3" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/><path d="M9 11h12M9 15h12M9 19h7" stroke="#fff" stroke-width="2.4" stroke-linecap="round"/></svg>
+          </span>
+          <b>Escanear producto</b>
+          <i>etiqueta + báscula</i>
+        </button>
+        <button class="eat-tile plate" id="btnPlate">
+          <span class="eat-badge">ESTIMADO</span>
+          <span class="eat-ico">
+            <svg width="30" height="30" viewBox="0 0 30 30" fill="none"><rect x="3" y="8" width="24" height="17" rx="5" stroke="#E2540F" stroke-width="2.4"/><path d="M10 8l2-4h6l2 4" stroke="#E2540F" stroke-width="2.4" stroke-linejoin="round"/><circle cx="15" cy="16.5" r="4.5" stroke="#FF8A00" stroke-width="2.4"/></svg>
+          </span>
+          <b>Foto del plato</b>
+          <i>cuando comes fuera</i>
+        </button>
+      </div>
+
+      <section class="eat-sec">
+        <div class="eat-sec-head"><h3>Tus productos</h3><button class="eat-link" id="eatAll">ver todos</button></div>
+        <div class="eat-carousel" id="eatProducts"></div>
+      </section>
+
+      <section class="eat-sec">
+        <div class="eat-sec-head"><h3>Hoy comiste</h3><button class="eat-link" id="eatManual">+ a mano</button></div>
+        <div class="eat-timeline" id="eatTimeline"></div>
+      </section>
+    </main>
+
     <main class="view view-bot" id="view-bot">
       <div class="bot-head">
         <div class="bot-avatar">
@@ -260,6 +285,10 @@
     </main>
 
     <!-- nav inferior -->
+    <div class="scan-ov" id="photoLoading" hidden>
+      <div class="scan-card"><div class="scan-frame"><i></i></div><span id="photoLoadingTxt">Analizando…</span></div>
+    </div>
+
     <nav class="tabbar">
       <button class="tab tab-active" data-view="hoy">
         <svg class="tab-ico" width="24" height="24" viewBox="0 0 24 24" fill="none"><circle cx="12" cy="12" r="4.5" stroke="currentColor" stroke-width="2.2"/><path d="M12 2v3M12 19v3M2 12h3M19 12h3M4.9 4.9l2.1 2.1M17 17l2.1 2.1M19.1 4.9L17 7M7 17l-2.1 2.1" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>
@@ -268,6 +297,10 @@
       <button class="tab" data-view="log">
         <svg class="tab-ico" width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="4" y="12" width="3.5" height="8" rx="1.5" stroke="currentColor" stroke-width="2"/><rect x="10.2" y="7" width="3.5" height="13" rx="1.5" stroke="currentColor" stroke-width="2"/><rect x="16.5" y="3" width="3.5" height="17" rx="1.5" stroke="currentColor" stroke-width="2"/></svg>
         <span>Log</span><i class="tab-ind"></i>
+      </button>
+      <button class="tab tab-fab" data-view="comer">
+        <span class="fab"><svg width="26" height="26" viewBox="0 0 26 26" fill="none"><path d="M13 5v16M5 13h16" stroke="#fff" stroke-width="3" stroke-linecap="round"/></svg></span>
+        <span>Comer</span>
       </button>
       <button class="tab" data-view="bot">
         <svg class="tab-ico" width="24" height="24" viewBox="0 0 24 24" fill="none"><rect x="4" y="7" width="16" height="12" rx="5" stroke="currentColor" stroke-width="2"/><line x1="12" y1="3.5" x2="12" y2="7" stroke="currentColor" stroke-width="2" stroke-linecap="round"/><circle cx="9.5" cy="13" r="1.4" fill="currentColor"/><circle cx="14.5" cy="13" r="1.4" fill="currentColor"/></svg>
@@ -287,8 +320,8 @@
 
   <div class="toast" id="toast" hidden></div>
 
-  <script src="knowledge.js?v=14"></script>
-  <script src="bot.js?v=14"></script>
-  <script src="app.js?v=14"></script>
+  <script src="knowledge.js?v=15"></script>
+  <script src="bot.js?v=15"></script>
+  <script src="app.js?v=15"></script>
 </body>
 </html>

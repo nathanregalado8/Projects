@@ -732,6 +732,7 @@ function scrollChatToEnd() {
 function renderAll() {
   renderHoy();
   if ($("view-log").classList.contains("view-active")) renderLog();
+  if ($("view-comer").classList.contains("view-active")) renderEat();
 }
 
 /* ==========================================================
@@ -742,6 +743,7 @@ function switchView(name) {
   $("view-" + name).classList.add("view-active");
   document.querySelectorAll(".tab").forEach((t) => t.classList.toggle("tab-active", t.dataset.view === name));
   if (name === "log") renderLog();
+  if (name === "comer") renderEat();
   if (name === "config") renderConfig();
   document.body.classList.toggle("chat-mode", name === "bot");
   if (name === "bot") { renderChat(); document.querySelector(".tab-glow").classList.remove("on"); }
@@ -921,20 +923,39 @@ function productSheet(prod, grams = "", { scanned = null } = {}) {
     </div>
     ${check}
     <label class="pbox wide"><span class="pbox-k">¿QUÉ ES?</span><input class="pbox-v" id="psName" type="text" value="${esc(p.name)}" placeholder="Pollo horneado"></label>
-    <label class="pbox big"><span class="pbox-k">GRAMOS EN LA BÁSCULA</span>
-      <input class="pbox-v" id="psGrams" type="number" inputmode="decimal" min="0" step="any" value="${grams}" placeholder="0"></label>
     <div id="psCook" ${p.ready_to_eat ? "hidden" : ""}>
       <div class="seg" id="psSeg">
         <button class="seg-b ${weighed === "cooked" ? "on" : ""}" data-w="cooked">🍳 Lo pesé cocinado</button>
         <button class="seg-b ${weighed === "raw" ? "on" : ""}" data-w="raw">🥩 Crudo / seco</button>
       </div>
-      <label class="pbox wide yield"><span class="pbox-k">RENDIMIENTO: 1 g CRUDO → ? g COCIDO</span>
-        <input class="pbox-v" id="psYield" type="number" inputmode="decimal" min="0.1" step="any" value="${p.cooked_yield}"></label>
-      <div class="sh-sub" id="psYieldHint"></div>
+    </div>
+    <label class="pbox big"><span class="pbox-k">GRAMOS EN LA BÁSCULA</span>
+      <input class="pbox-v" id="psGrams" type="number" inputmode="decimal" min="0" step="any" value="${grams}" placeholder="0"></label>
+    <div class="ps-tools">
+      <button class="tool-b" id="psSlideBtn">🎚️ Deslizar gramos</button>
+      <button class="tool-b" id="psTargetBtn">🎯 Por calorías</button>
+    </div>
+    <div class="ps-slide" id="psSlide" hidden>
+      <div class="slide-row">
+        <button class="step" data-d="-5">−5</button>
+        <input type="range" id="psRange" min="0" max="300" step="1" value="${+grams || 0}">
+        <button class="step" data-d="5">+5</button>
+      </div>
+      <div class="slide-scale"><span>0 g</span><span id="psRangeMax">300 g</span></div>
+    </div>
+    <div class="ps-target" id="psTarget" hidden>
+      <label class="pbox"><span class="pbox-k">QUIERO COMER (KCAL)</span>
+        <input class="pbox-v" id="psKcalTarget" type="number" inputmode="numeric" min="0" placeholder="400"></label>
+      <div class="sh-sub" id="psTargetOut">Escribe las calorías y te digo cuántos gramos servirte.</div>
     </div>
     <div class="sh-result" id="psResult"></div>
     <details class="sh-det" ${scanned ? "open" : ""}>
       <summary>Datos de la etiqueta</summary>
+      <div id="psYieldBox">
+        <label class="pbox wide yield"><span class="pbox-k">RENDIMIENTO: 1 g CRUDO → ? g COCIDO</span>
+          <input class="pbox-v" id="psYield" type="number" inputmode="decimal" min="0.1" step="any" value="${p.cooked_yield}"></label>
+        <div class="sh-sub" id="psYieldHint"></div>
+      </div>
       <div class="sh-form">
         <label class="pbox wide"><span class="pbox-k">VALORES POR (G)</span><input class="pbox-v" id="psBase" type="number" inputmode="decimal" min="1" step="any" value="${p.base_g}"></label>
         <label class="pbox"><span class="pbox-k">CALORÍAS</span><input class="pbox-v" id="psKcal" type="number" inputmode="decimal" min="0" step="any" value="${p.kcal}"></label>
@@ -956,9 +977,17 @@ function productSheet(prod, grams = "", { scanned = null } = {}) {
       const paint = () => {
         const d = read(), g = +q("#psGrams").value || 0;
         q("#psCook").hidden = d.ready_to_eat;
+        q("#psYieldBox").hidden = d.ready_to_eat;
         q("#psYieldHint").textContent = `Ej.: 100 g crudo → ${Math.round(100 * d.cooked_yield)} g cocido. Si un día pesas crudo y luego cocido, pon tu número real: es lo que más afina.`;
-        if (!g || !d.base_g) { q("#psResult").innerHTML = `<span class="muted">Escribe los gramos para ver los macros</span>`; return; }
         const cooked = !d.ready_to_eat && weighed === "cooked";
+        // barra: de 0 a ~3 porciones de la etiqueta, en las mismas unidades que se pesan
+        const perServing = d.base_g * (cooked ? d.cooked_yield : 1);
+        const max = Math.max(100, Math.ceil(Math.max(perServing * 3, g * 1.2) / 10) * 10);
+        const rg = q("#psRange");
+        if (+rg.max !== max) { rg.max = max; q("#psRangeMax").textContent = `${max} g`; }
+        if (document.activeElement !== rg) rg.value = g;
+        rg.style.setProperty("--p", `${Math.min(100, (g / max) * 100)}%`);
+        if (!g || !d.base_g) { q("#psResult").innerHTML = `<span class="muted">Escribe o desliza los gramos para ver los macros</span>`; return; }
         // se calcula por 3 caminos distintos; si no dan lo mismo, no se registra
         const m = App.portion(d, g, cooked);
         const lg = App.labelGrams(d, g, cooked);
@@ -968,6 +997,8 @@ function productSheet(prod, grams = "", { scanned = null } = {}) {
         q("#psSave").disabled = !agree;
         q("#psResult").innerHTML = `<b>${m.kcal} kcal</b><span>P ${m.protein}g</span><span>C ${m.carbs}g</span><span>G ${m.fat}g</span>`
           + (cooked ? `<span class="muted wide">${g} g cocido ≈ ${Math.round(lg)} g crudo de la etiqueta</span>` : "")
+          + (() => { const left = App.state.goals.kcal - App.dayTotals().kcal - m.kcal;
+              return `<span class="left wide ${left < 0 ? "over" : ""}">${left >= 0 ? `te quedarían <b>${left}</b> kcal hoy` : `te pasarías <b>${-left}</b> kcal de tu meta`}</span>`; })()
           + (agree ? "" : `<span class="bad wide">Los 3 cálculos no coinciden, revisa los datos</span>`);
       };
       q("#psSeg").onclick = (e) => {
@@ -982,6 +1013,28 @@ function productSheet(prod, grams = "", { scanned = null } = {}) {
         paint();
       };
       box.querySelectorAll("input").forEach((i) => { i.oninput = paint; });
+      const setGrams = (v) => { q("#psGrams").value = Math.max(0, Math.round(v)); paint(); };
+      q("#psRange").oninput = (e) => setGrams(+e.target.value);
+      box.querySelectorAll(".step").forEach((b) => { b.onclick = () => setGrams((+q("#psGrams").value || 0) + +b.dataset.d); });
+      // calorías → gramos: kcal por gramo pesado = kcal/base ÷ rendimiento (si se pesa cocido)
+      q("#psKcalTarget").oninput = () => {
+        const d = read(), target = +q("#psKcalTarget").value || 0;
+        const cooked = !d.ready_to_eat && weighed === "cooked";
+        const perG = d.base_g ? d.kcal / d.base_g / (cooked ? d.cooked_yield : 1) : 0;
+        if (!target || !perG) { q("#psTargetOut").textContent = "Escribe las calorías y te digo cuántos gramos servirte."; return; }
+        const g = Math.round(target / perG);
+        q("#psTargetOut").innerHTML = `Sírvete <b>${g} g</b>${cooked ? " cocido" : ""} en la báscula.`;
+        setGrams(g);
+      };
+      const toggle = (btn, panel) => {
+        q(btn).onclick = () => {
+          const open = q(panel).hidden;
+          q(panel).hidden = !open; q(btn).classList.toggle("on", open);
+          if (open && panel === "#psTarget") q("#psKcalTarget").focus();
+        };
+      };
+      toggle("#psSlideBtn", "#psSlide");
+      toggle("#psTargetBtn", "#psTarget");
       paint();
       if (!grams) q("#psGrams").focus();
       q("#psCancel").onclick = closeSheet;
@@ -1074,6 +1127,39 @@ function productsSheet() {
     });
 }
 
+/* ==========================================================
+   Pestaña Comer
+   ========================================================== */
+function renderEat() {
+  const g = App.state.goals, t = App.dayTotals(), left = g.kcal - t.kcal;
+  $("eatLeft").textContent = Math.abs(left);
+  $("eatLeftLbl").textContent = left >= 0 ? "kcal libres hoy" : "kcal por encima";
+  $("eatLeft").parentElement.classList.toggle("over", left < 0);
+  $("eatBarFill").style.width = `${Math.min(100, (t.kcal / g.kcal) * 100)}%`;
+
+  const prods = App.productList();
+  $("eatAll").hidden = prods.length < 5;
+  $("eatProducts").innerHTML = prods.slice(0, 12).map((p) => `
+    <button class="pcard" data-id="${esc(p.id)}">
+      <span class="pcard-emo">${foodEmoji(p.name)}</span>
+      <b>${esc(p.name)}</b>
+      <i>${p.kcal} kcal / ${p.base_g} g${p.ready_to_eat === false ? " crudo" : ""}</i>
+      <span class="pcard-go">pesar →</span>
+    </button>`).join("")
+    + `<button class="pcard pcard-new" id="eatNewCard"><span class="pcard-emo">🏷️</span><b>${prods.length ? "Nuevo producto" : "Escanea tu primer producto"}</b><i>foto de la etiqueta</i></button>`;
+
+  const meals = App.currentDay().meals;
+  $("eatTimeline").innerHTML = meals.length
+    ? meals.slice().reverse().map((m) => `
+      <div class="tl-item">
+        <span class="tl-time">${m.time || ""}</span>
+        <span class="tl-dot"></span>
+        <span class="tl-name">${esc(m.name)}</span>
+        <b class="tl-kcal">${m.kcal}</b>
+      </div>`).join("")
+    : `<div class="empty">Nada registrado todavía.<br>Escanea un producto o toma foto del plato.</div>`;
+}
+
 /* ---------- hoja: API key ---------- */
 function apiSheet() {
   openSheet(`
@@ -1163,7 +1249,7 @@ function handlePhoto(file) {
 }
 
 function photoLoading(on, label = "Analizando tu comida…") {
-  $("photoInner").hidden = on; $("photoBtns").hidden = on; $("photoLoading").hidden = !on;
+  $("photoLoading").hidden = !on;
   $("photoLoadingTxt").textContent = label;
 }
 function resetPhotoInputs() { $("photoInput").value = ""; }
@@ -1243,7 +1329,16 @@ function bindEvents() {
     }
   };
 
-  $("btnLabel").onclick = (e) => { e.stopPropagation(); productsSheet(); };
+  $("btnLabel").onclick = (e) => { e.stopPropagation(); pickPhoto("label"); };
+  $("goEat").onclick = () => switchView("comer");
+  $("eatAll").onclick = () => productsSheet();
+  $("eatManual").onclick = () => mealSheet();
+  $("eatProducts").onclick = (e) => {
+    const c = e.target.closest(".pcard");
+    if (!c) return;
+    if (c.id === "eatNewCard") pickPhoto("label");
+    else productSheet(App.state.products[c.dataset.id]);
+  };
   $("btnPlate").onclick = (e) => { e.stopPropagation(); pickPhoto("plate"); };
   $("photoInput").onchange = (e) => e.target.files[0] && handlePhoto(e.target.files[0]);
 
