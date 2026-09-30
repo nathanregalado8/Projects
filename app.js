@@ -1,7 +1,9 @@
 /* ==========================================================
    JIMMITEOBOT — estado, render e interacciones
    ========================================================== */
-const STORE_KEY = "jimmiteobot_v2";
+// nombre y almacenamiento por versión de la app (index.html define window.APP)
+const STORE_KEY = window.APP?.store || "jimmiteobot_v2";
+const APP_NAME = window.APP?.name || "JimmiteoBot";
 const $ = (id) => document.getElementById(id);
 
 const DEFAULT_STATE = {
@@ -109,6 +111,8 @@ const App = {
       carbs: Math.max(0, +p.carbs || 0), fat: Math.max(0, +p.fat || 0), used: Date.now(),
       ready_to_eat: p.ready_to_eat !== false, cooked_yield: Math.max(0.1, +p.cooked_yield || 1),
       weighed: p.weighed === "cooked" ? "cooked" : "raw",
+      unit_g: Math.max(0, +p.unit_g || 0), unit_name: String(p.unit_name || "").trim().slice(0, 20),
+      mode: p.mode === "unit" && +p.unit_g > 0 ? "unit" : "g",
     };
     if (prod.ready_to_eat) { prod.cooked_yield = 1; prod.weighed = "raw"; }
     this.state.products[id] = prod;
@@ -142,13 +146,18 @@ const App = {
     const f = this.labelGrams(p, grams, cooked) / p.base_g;
     return { kcal: Math.round(p.kcal * f), protein: Math.round(p.protein * f), carbs: Math.round(p.carbs * f), fat: Math.round(p.fat * f) };
   },
-  logProduct(p, grams, cooked) {
+  logProduct(p, grams, cooked, label) {
     grams = Math.round(+grams * 10) / 10;
     if (cooked === undefined) cooked = p.weighed === "cooked";
     const stored = this.state.products[p.id];
     if (stored) { stored.used = Date.now(); if (!stored.ready_to_eat) stored.weighed = cooked ? "cooked" : "raw"; }
     const tag = p.ready_to_eat ? "" : cooked ? " cocido" : " crudo";
-    return this.addMeal({ name: `${p.name} · ${grams} g${tag}`.slice(0, 60), ...this.portion(p, grams, cooked) });
+    return this.addMeal({ name: `${p.name} · ${label || `${grams} g${tag}`}`.slice(0, 60), ...this.portion(p, grams, cooked) });
+  },
+  unitLabel(n, name) {
+    const u = name || "unidad";
+    const plural = n === 1 ? u : /[aeiou]$/.test(u) ? u + "s" : u + "es";
+    return `${n} ${plural}`;
   },
 
   setGoal(field, value) { this.state.goals[field] = value; this.save(); renderAll(); },
@@ -772,6 +781,7 @@ function productSheet(prod, grams = "", { scanned = null } = {}) {
   const saved = !!(p.id && App.state.products[p.id]);
   const manual = !saved && !scanned;
   let weighed = p.ready_to_eat ? "raw" : (p.weighed || "cooked");
+  let mode = p.mode === "unit" && +p.unit_g > 0 ? "unit" : "g";
   const issues = scanned?.issues || [];
   const openData = manual || issues.length > 0;
   openSheet(`
@@ -785,13 +795,29 @@ function productSheet(prod, grams = "", { scanned = null } = {}) {
 
     <div class="ps-kcal" id="psResult"></div>
 
-    <div class="ps-weigh">
-      <div class="ps-grams"><input id="psGrams" type="number" inputmode="decimal" min="0" step="any" value="${grams}" placeholder="0"><span>g</span></div>
+    <div class="seg ps-mode" id="psMode">
+      <button class="seg-b ${mode === "g" ? "on" : ""}" data-m="g">⚖️ Por peso</button>
+      <button class="seg-b ${mode === "unit" ? "on" : ""}" data-m="unit">🔢 Por unidades</button>
+    </div>
+
+    <div class="ps-weigh" id="psWeighBox">
+      <label class="ps-grams"><input id="psGrams" type="number" inputmode="decimal" min="0" step="any" value="${grams}" placeholder="0"><span>g</span>
+        <svg class="ps-pen" width="15" height="15" viewBox="0 0 14 14" aria-hidden="true"><path d="M2 12l1-4 7-7 3 3-7 7Z" stroke="currentColor" stroke-width="1.6" fill="none" stroke-linejoin="round"/></svg></label>
+      <div class="ps-type-hint">toca el número para escribirlo, o desliza</div>
       <div class="slide-row">
         <button class="step" data-d="-5">−5</button>
         <input type="range" id="psRange" min="0" max="300" step="1" value="${+grams || 0}">
         <button class="step" data-d="5">+5</button>
       </div>
+    </div>
+
+    <div class="ps-weigh" id="psUnitBox" hidden>
+      <div class="unit-row">
+        <button class="step big" data-u="-1">−</button>
+        <label class="ps-grams"><input id="psUnits" type="number" inputmode="decimal" min="0" step="any" value="1"><span id="psUnitWord">unidad</span></label>
+        <button class="step big" data-u="1">+</button>
+      </div>
+      <div class="ps-type-hint" id="psUnitHint"></div>
     </div>
 
     <div class="ps-opts">
@@ -800,7 +826,7 @@ function productSheet(prod, grams = "", { scanned = null } = {}) {
     </div>
     <div class="ps-target" id="psTarget" hidden>
       <input id="psKcalTarget" type="number" inputmode="numeric" min="0" placeholder="400">
-      <span id="psTargetOut">kcal → te digo los gramos</span>
+      <span id="psTargetOut">kcal → te digo cuánto</span>
     </div>
 
     <details class="sh-det" ${openData ? "open" : ""}>
@@ -811,6 +837,8 @@ function productSheet(prod, grams = "", { scanned = null } = {}) {
         <label class="pbox"><span class="pbox-k">PROTEÍNA (G)</span><input class="pbox-v" id="psProt" type="number" inputmode="decimal" min="0" step="any" value="${p.protein}"></label>
         <label class="pbox"><span class="pbox-k">CARBOS (G)</span><input class="pbox-v" id="psCarb" type="number" inputmode="decimal" min="0" step="any" value="${p.carbs}"></label>
         <label class="pbox"><span class="pbox-k">GRASA (G)</span><input class="pbox-v" id="psFat" type="number" inputmode="decimal" min="0" step="any" value="${p.fat}"></label>
+        <label class="pbox"><span class="pbox-k">1 UNIDAD = ? G</span><input class="pbox-v" id="psUnitG" type="number" inputmode="decimal" min="0" step="any" value="${p.unit_g || ""}" placeholder="—"></label>
+        <label class="pbox"><span class="pbox-k">NOMBRE UNIDAD</span><input class="pbox-v" id="psUnitName" type="text" value="${esc(p.unit_name || "")}" placeholder="galleta"></label>
         <label class="pbox wide chk"><input type="checkbox" id="psRaw" ${p.ready_to_eat ? "" : "checked"}><span>La etiqueta es del producto <b>crudo/seco</b></span></label>
         <label class="pbox wide" id="psYieldBox"><span class="pbox-k">RENDIMIENTO: 1 g CRUDO → ? g COCIDO</span><input class="pbox-v" id="psYield" type="number" inputmode="decimal" min="0.1" step="any" value="${p.cooked_yield}"></label>
       </div>
@@ -824,12 +852,24 @@ function productSheet(prod, grams = "", { scanned = null } = {}) {
         id: p.id, name: (q("#psName")?.value ?? p.name).trim() || "Producto", base_g: +q("#psBase").value || 0,
         kcal: +q("#psKcal").value || 0, protein: +q("#psProt").value || 0, carbs: +q("#psCarb").value || 0, fat: +q("#psFat").value || 0,
         ready_to_eat: !q("#psRaw").checked, cooked_yield: +q("#psYield").value || 1, weighed,
+        unit_g: +q("#psUnitG").value || 0, unit_name: q("#psUnitName").value.trim().toLowerCase(), mode,
       });
-      const isCooked = (d) => !d.ready_to_eat && weighed === "cooked";
+      const units = () => Math.max(0, +q("#psUnits").value || 0);
+      // gramos efectivos: lo escrito/deslizado, o unidades × gramos por unidad
+      const gramsNow = (d) => (mode === "unit" ? units() * d.unit_g : +q("#psGrams").value || 0);
+      const isCooked = (d) => mode === "g" && !d.ready_to_eat && weighed === "cooked";
       const paint = () => {
-        const d = read(), g = +q("#psGrams").value || 0, cooked = isCooked(d);
+        const d = read(), g = gramsNow(d), cooked = isCooked(d);
+        q("#psWeighBox").hidden = mode !== "g";
+        q("#psUnitBox").hidden = mode !== "unit";
+        const n = units();
+        q("#psUnitWord").textContent = App.unitLabel(n, d.unit_name).replace(/^\S+ /, "");
+        q("#psUnits").style.width = `${Math.max(1, String(q("#psUnits").value || "0").length) + 0.6}ch`;
+        q("#psUnitHint").innerHTML = d.unit_g
+          ? `1 ${esc(d.unit_name || "unidad")} = ${d.unit_g} g según la etiqueta`
+          : `<b>Falta cuántos gramos es 1 unidad.</b> Ponlo abajo en Datos de la etiqueta (sale en «Serving size»).`;
         q("#psGrams").style.width = `${Math.max(1, String(q("#psGrams").value || "0").length) + 0.6}ch`;
-        q("#psCookedChip").hidden = d.ready_to_eat;
+        q("#psCookedChip").hidden = d.ready_to_eat || mode === "unit";
         q("#psCookedChip").classList.toggle("on", weighed === "cooked");
         q("#psYieldBox").hidden = d.ready_to_eat;
         // barra: de 0 a ~3 porciones de la etiqueta, en las unidades que se pesan
@@ -840,7 +880,7 @@ function productSheet(prod, grams = "", { scanned = null } = {}) {
         rg.style.setProperty("--p", `${Math.min(100, (g / max) * 100)}%`);
         const ok = g > 0 && d.base_g > 0;
         q("#psSave").disabled = !ok;
-        if (!ok) { q("#psResult").innerHTML = `<b class="zero">0<small> kcal</small></b><span class="ps-hint">pon los gramos o desliza la barra</span>`; q("#psSave").textContent = "REGISTRAR"; return; }
+        if (!ok) { q("#psResult").innerHTML = `<b class="zero">0<small> kcal</small></b><span class="ps-hint">${mode === "unit" ? "pon cuántas unidades" : "escribe los gramos o desliza la barra"}</span>`; q("#psSave").textContent = "REGISTRAR"; return; }
         const m = App.portion(d, g, cooked);
         const left = App.state.goals.kcal - App.dayTotals().kcal - m.kcal;
         q("#psResult").innerHTML = `<b>${m.kcal}<small> kcal</small></b>
@@ -851,7 +891,16 @@ function productSheet(prod, grams = "", { scanned = null } = {}) {
       const setGrams = (v) => { q("#psGrams").value = Math.max(0, Math.round(v)); paint(); };
       box.querySelectorAll("input").forEach((i) => { i.oninput = paint; });
       q("#psRange").oninput = (e) => setGrams(+e.target.value);
-      box.querySelectorAll(".step").forEach((b) => { b.onclick = () => setGrams((+q("#psGrams").value || 0) + +b.dataset.d); });
+      box.querySelectorAll(".step[data-d]").forEach((b) => { b.onclick = () => setGrams((+q("#psGrams").value || 0) + +b.dataset.d); });
+      box.querySelectorAll(".step[data-u]").forEach((b) => { b.onclick = () => { q("#psUnits").value = Math.max(0, units() + +b.dataset.u); paint(); }; });
+      q("#psMode").onclick = (e) => {
+        const b = e.target.closest(".seg-b");
+        if (!b) return;
+        mode = b.dataset.m;
+        box.querySelectorAll("#psMode .seg-b").forEach((x) => x.classList.toggle("on", x === b));
+        if (mode === "unit" && !read().unit_g) { q(".sh-det").open = true; q("#psUnitG").focus(); }
+        paint();
+      };
       q("#psCookedChip").onclick = () => { weighed = weighed === "cooked" ? "raw" : "cooked"; paint(); };
       q("#psRaw").onchange = () => {
         if (q("#psRaw").checked && +q("#psYield").value === 1) q("#psYield").value = 2.5;
@@ -866,21 +915,28 @@ function productSheet(prod, grams = "", { scanned = null } = {}) {
       q("#psKcalTarget").oninput = () => {
         const d = read(), target = +q("#psKcalTarget").value || 0;
         const perG = d.base_g ? d.kcal / d.base_g / (isCooked(d) ? d.cooked_yield : 1) : 0;
-        if (!target || !perG) { q("#psTargetOut").textContent = "kcal → te digo los gramos"; return; }
+        if (!target || !perG) { q("#psTargetOut").textContent = "kcal → te digo cuánto"; return; }
+        if (mode === "unit" && d.unit_g) {
+          const n = Math.round((target / (perG * d.unit_g)) * 2) / 2; // de media en media unidad
+          q("#psTargetOut").innerHTML = `→ come <b>${App.unitLabel(n, d.unit_name)}</b>`;
+          q("#psUnits").value = n; paint(); return;
+        }
         const g = Math.round(target / perG);
         q("#psTargetOut").innerHTML = `→ sírvete <b>${g} g</b>`;
         setGrams(g);
       };
       paint();
       if (!saved && !p.name) q("#psName").focus();
-      else if (!grams) q("#psGrams").focus();
+      else if (!grams && mode === "g") q("#psGrams").focus();
       q("#psCancel").onclick = closeSheet;
       if (saved) q("#psDel").onclick = () => { App.deleteProduct(p.id); closeSheet(); renderAll(); toast("Producto borrado 🗑️"); };
       q("#psSave").onclick = () => {
-        const d = read(), g = +q("#psGrams").value || 0;
+        const d = read(), g = gramsNow(d);
         if (g <= 0 || d.base_g <= 0) return;
         const prodSaved = App.saveProduct(d);
-        const meal = App.logProduct(prodSaved, g, isCooked(prodSaved));
+        const meal = mode === "unit"
+          ? App.logProduct(prodSaved, g, false, App.unitLabel(units(), prodSaved.unit_name))
+          : App.logProduct(prodSaved, g, isCooked(prodSaved));
         pushChat("action", `⚖️ Registré «${meal.name}» — ${meal.kcal} kcal · P ${meal.protein}g · C ${meal.carbs}g · G ${meal.fat}g`);
         closeSheet();
         toast(`+${meal.kcal} kcal registradas ⚖️`);
@@ -1216,7 +1272,7 @@ function bindEvents() {
   $("exportBtn").onclick = () => {
     const blob = new Blob([JSON.stringify({ ...App.state, apiKey: "" }, null, 2)], { type: "application/json" });
     const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob); a.download = `jimmiteobot-${App.todayKey()}.json`; a.click();
+    a.href = URL.createObjectURL(blob); a.download = `${App.normName(APP_NAME).replace(/ /g, "-") || "app"}-${App.todayKey()}.json`; a.click();
     URL.revokeObjectURL(a.href);
     toast("Datos exportados 💾");
   };
@@ -1272,6 +1328,7 @@ function initBubbles() {
 }
 
 App.load();
+$("botName").textContent = APP_NAME;
 bindEvents();
 renderAll();
 renderApiStatus();

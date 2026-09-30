@@ -106,6 +106,9 @@ const LABEL_TOOL = {
       protein: { type: "number", description: "Proteína (g) para base_g" },
       carbs: { type: "number", description: "Carbohidratos totales (g) para base_g" },
       fat: { type: "number", description: "Grasa total (g) para base_g" },
+      serving_g: { type: "number", description: "Gramos de UNA porción según la etiqueta (ej. 'Serving size 2 cookies (28g)' → 28). 0 si no aparece." },
+      serving_units: { type: "number", description: "Cuántas piezas/unidades es UNA porción (ej. '2 cookies' → 2, '1 bar' → 1, '1 patty' → 1). 0 si la porción no se expresa en piezas (ej. '1/4 cup', '45 g')." },
+      unit_name: { type: "string", description: "Nombre en español de la pieza, singular (galleta, barra, tortilla, hamburguesa…). Vacío si no aplica." },
       ready_to_eat: { type: "boolean", description: "true si la etiqueta describe el producto tal como se come (yogurt, pan, cereal, embutido, pollo ya cocido, producto 'as prepared'). false si describe el producto crudo/seco que luego se cocina (arroz, pasta, avena, frijoles, papas, carne o pollo crudos)." },
       cooked_yield: { type: "number", description: "Si ready_to_eat es false: rendimiento típico peso cocido ÷ peso crudo según tablas USDA para este tipo de alimento (ej. arroz blanco ~2.8, pasta ~2.3, avena en agua ~4, frijoles secos ~2.5, papa horneada ~0.8, pechuga de pollo horneada ~0.72, carne molida ~0.73). Si ready_to_eat es true, 1." },
       note: { type: "string", description: "Aviso breve si algo fue dudoso o ilegible; vacío si todo se leyó bien" },
@@ -240,7 +243,7 @@ function systemPrompt() {
   const books = KNOWLEDGE.books.map((b) => `- "${b.title}" — ${b.author} (${b.year}): ${b.why}`).join("\n");
   const videos = KNOWLEDGE.videos.map((v) => `- "${v.title}" — ${v.source}: ${v.why}`).join("\n");
   const tips = KNOWLEDGE.tips.map((t) => `- ${t.text} (Fuente: ${t.source})`).join("\n");
-  return `Eres JimmiteoBot, el coach de nutrición y salud dentro de la app JimmiteoBot. Hablas español, eres cercano, motivador y breve (2-5 frases, usa emojis con moderación).
+  return `Eres ${APP_NAME}, el coach de nutrición y salud dentro de la app ${APP_NAME}. Hablas español, eres cercano, motivador y breve (2-5 frases, usa emojis con moderación).
 
 Puedes EDITAR la app con tus herramientas: registrar/eliminar comidas, registrar el peso corporal, cambiar metas, calcular macros automáticamente desde el perfil y cambiar la fecha activa. Úsalas siempre que el usuario lo pida, sin pedir confirmación para acciones simples. Si pregunta cuántas calorías o macros debería comer, usa calculate_macros.
 
@@ -360,6 +363,12 @@ async function readNutritionLabel(base64jpeg) {
   if (!d.readable || !(+d.base_g > 0)) return { readable: false };
   for (const f of ["base_g", "kcal", "protein", "carbs", "fat"]) d[f] = r1(Math.max(0, +d[f] || 0));
   d.cooked_yield = d.ready_to_eat ? 1 : r1(+d.cooked_yield || 1);
+  // productos que vienen en piezas: gramos por unidad y modo «unidades» por defecto
+  const units = +d.serving_units || 0, sg = +d.serving_g || 0;
+  d.unit_g = units > 0 && sg > 0 ? r1(sg / units) : 0;
+  d.unit_name = d.unit_g ? String(d.unit_name || "unidad").trim().toLowerCase() : "";
+  d.mode = d.unit_g && d.ready_to_eat ? "unit" : "g";
+  delete d.serving_g; delete d.serving_units;
   d.issues = labelIssues(d);
   return d;
 }
@@ -489,7 +498,7 @@ function localBot(text) {
   // Saludo
   if (/^(hola|hey|buenas|hi|holi)/.test(t)) {
     const name = App.state.profile.nombre;
-    return reply(`¡Hola${name ? " " + name : ""}! 👋 Soy JimmiteoBot. Puedo registrar tus comidas, calcular y cambiar tus metas, y recomendarte libros y videos verificados de salud. ¿En qué te ayudo?`);
+    return reply(`¡Hola${name ? " " + name : ""}! 👋 Soy ${APP_NAME}. Puedo registrar tus comidas, calcular y cambiar tus metas, y recomendarte libros y videos verificados de salud. ¿En qué te ayudo?`);
   }
 
   // Fallback

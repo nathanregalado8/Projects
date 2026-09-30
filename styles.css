@@ -847,3 +847,20 @@ h2, h3, .card-title, .sh-title { font-family: "Montserrat", "Inter", sans-serif;
 .eat-sec-head h3 { font-weight: 800; font-size: 13px; letter-spacing: .4px; text-transform: uppercase; color: var(--ink); }
 .goal-dot { border-radius: 50%; }
 .bot-avatar .dot { background: var(--orange); }
+
+/* sin zoom: doble toque desactivado y campos a 16px (iOS hace zoom si son menores) */
+html, body { touch-action: manipulation; }
+button, a, input, select, textarea, label { touch-action: manipulation; }
+.pbox-v, .sh-ta, .prof-row input, .chat-input input, select { font-size: 16px; }
+
+/* peso escribible y modo unidades */
+.ps-grams { cursor: text; position: relative; padding: 4px 14px; margin: 0 auto; border-radius: 16px; border: 1.5px dashed var(--line-2); background: var(--inner); }
+.ps-grams:focus-within { border-style: solid; border-color: var(--orange); background: #fff; }
+.ps-pen { color: var(--muted); margin-left: 6px; align-self: center; }
+.ps-type-hint { text-align: center; font-size: 11.5px; color: var(--muted); }
+.ps-type-hint b { color: var(--orange-ink); font-weight: 700; }
+.ps-mode { grid-template-columns: 1fr 1fr; display: grid; }
+.unit-row { display: flex; align-items: center; justify-content: center; gap: 14px; }
+.step.big { width: 52px; height: 52px; border-radius: 16px; font-size: 24px; }
+#psUnitBox .ps-grams input { min-width: 2ch; }
+.ps-grams { width: fit-content; display: flex; }
