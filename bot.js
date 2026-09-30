@@ -146,10 +146,10 @@ function atwaterOff(d) {
 function labelIssues(d) {
   const out = [];
   const est = atwaterOff(d);
-  if (est) out.push(`Las calorías no cuadran con los macros: 4·P + 4·C + 9·G = ${est} kcal vs ${d.kcal} leídas. Puede ser fibra o redondeo, pero revisa calorías y macros.`);
-  if (d.protein + d.carbs + d.fat > d.base_g * 1.02) out.push(`Proteína + carbos + grasa suman más que la porción (${d.base_g} g). Algún número o la porción está mal.`);
-  if (d.kcal > d.base_g * 9.1) out.push(`${d.kcal} kcal en ${d.base_g} g es imposible (máximo 9 kcal por gramo). Revisa la porción.`);
-  if (d.confidence && d.confidence !== "alta") out.push(`La IA no está del todo segura de la lectura (confianza ${d.confidence}). Compara con la etiqueta.`);
+  if (est) out.push(`Las calorías (${d.kcal}) no cuadran con los macros (${est}). Revisa los datos.`);
+  if (d.protein + d.carbs + d.fat > d.base_g * 1.02) out.push(`Los macros suman más que la porción (${d.base_g} g).`);
+  if (d.kcal > d.base_g * 9.1) out.push(`${d.kcal} kcal en ${d.base_g} g es imposible. Revisa la porción.`);
+  if (d.confidence && d.confidence !== "alta") out.push(`No leí la etiqueta con total seguridad. Compárala.`);
   return out;
 }
 
