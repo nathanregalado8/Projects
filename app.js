@@ -4,6 +4,56 @@
 // nombre y almacenamiento por versión de la app (index.html define window.APP)
 const STORE_KEY = window.APP?.store || "jimmiteobot_v2";
 const APP_NAME = window.APP?.name || "JimmiteoBot";
+
+/* ---------- frases del día (solo versiones con APP.notes, ej. Tiff Fit) ---------- */
+const Notes = {
+  on: !!window.APP?.notes && typeof FRASES_MOTIVACION !== "undefined",
+  sign: `— ${window.APP?.firma || ""}`.trim(),
+  // orden barajado fijo: cada día cambia y no se repite hasta dar la vuelta
+  perm(n, seed) {
+    const a = [...Array(n).keys()];
+    let x = seed;
+    const rnd = () => { x = (x * 1664525 + 1013904223) % 4294967296; return x / 4294967296; };
+    for (let i = n - 1; i > 0; i--) { const j = Math.floor(rnd() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; }
+    return a;
+  },
+  day() { return Math.floor(new Date(App.todayKey() + "T12:00:00").getTime() / 86400000); },
+  love(offset = 0) {
+    this._pa ||= this.perm(FRASES_AMOR.length, 7);
+    return FRASES_AMOR[this._pa[(this.day() + offset) % FRASES_AMOR.length]];
+  },
+  // varias frases de motivación por día (slot 0, 1, 2…)
+  motiv(slot = 0) {
+    this._pm ||= this.perm(FRASES_MOTIVACION.length, 13);
+    return FRASES_MOTIVACION[this._pm[(this.day() * 3 + slot) % FRASES_MOTIVACION.length]];
+  },
+  random(list) { return list[Math.floor(Math.random() * list.length)]; },
+};
+
+function renderNotes() {
+  if (!Notes.on) return;
+  $("loveNote").hidden = false;
+  if (!$("loveText").dataset.custom) $("loveText").textContent = Notes.love();
+  $("loveSign").textContent = Notes.sign;
+  for (const [id, slot] of [["eatQuote", 0], ["logQuote", 1]]) {
+    $(id).hidden = false;
+    $(id).innerHTML = `${esc(Notes.motiv(slot))} <b>${esc(Notes.sign)}</b>`;
+  }
+}
+
+// tras registrar una comida: una frase de ánimo al azar
+let cheerTimer;
+function cheer() {
+  if (!Notes.on) return;
+  clearTimeout(cheerTimer);
+  // sin frases de «buenos días / primera comida», que no cuadran a cualquier hora
+  const any = FRASES_MOTIVACION.filter((f) => !/primera comida|buenos días|arranca el día|levántate|cierra el día|termina el día/i.test(f));
+  $("cheerText").textContent = Notes.random(Math.random() < .25 ? FRASES_AMOR : any);
+  $("cheerSign").textContent = Notes.sign;
+  const el = $("cheer");
+  el.hidden = false; el.classList.remove("out");
+  cheerTimer = setTimeout(() => { el.classList.add("out"); setTimeout(() => (el.hidden = true), 400); }, 4200);
+}
 const $ = (id) => document.getElementById(id);
 
 const DEFAULT_STATE = {
@@ -79,6 +129,7 @@ const App = {
     const entry = { id: Date.now() + Math.random(), time: new Date().toTimeString().slice(0, 5), ...meal };
     this.currentDay().meals.push(entry);
     this.save(); renderAll();
+    setTimeout(cheer, 1300);
     return entry;
   },
   updateMeal(id, patch) {
@@ -603,6 +654,7 @@ function scrollChatToEnd() {
 /* solo re-dibuja la vista visible: mantiene la app fluida */
 function renderAll() {
   renderHoy();
+  renderNotes();
   if ($("view-log").classList.contains("view-active")) renderLog();
   if ($("view-comer").classList.contains("view-active")) renderEat();
 }
@@ -1329,6 +1381,15 @@ function initBubbles() {
 
 App.load();
 $("botName").textContent = APP_NAME;
+if (Notes.on) {
+  // tocar la nota muestra otra (al azar); la del día vuelve mañana
+  $("loveNote").onclick = () => {
+    const t = $("loveText");
+    t.classList.add("swap");
+    setTimeout(() => { t.textContent = Notes.random(FRASES_AMOR.filter((f) => f !== t.textContent)); t.dataset.custom = "1"; t.classList.remove("swap"); }, 180);
+  };
+  $("cheer").onclick = () => $("cheer").classList.add("out");
+}
 bindEvents();
 renderAll();
 renderApiStatus();

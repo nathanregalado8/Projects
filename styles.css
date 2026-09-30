@@ -864,3 +864,23 @@ button, a, input, select, textarea, label { touch-action: manipulation; }
 .step.big { width: 52px; height: 52px; border-radius: 16px; font-size: 24px; }
 #psUnitBox .ps-grams input { min-width: 2ch; }
 .ps-grams { width: fit-content; display: flex; }
+
+/* ---------- frases (Tiff Fit) ---------- */
+.note-card { display: flex; flex-direction: column; gap: 8px; width: 100%; text-align: left; padding: 16px 18px; border-radius: 22px;
+  background: var(--ink); color: #fff; box-shadow: 0 10px 24px rgba(30,34,38,.18); position: relative; overflow: hidden; }
+.note-card::after { content: "♥"; position: absolute; right: 14px; top: 10px; font-size: 22px; color: rgba(244,117,33,.55); line-height: 1; }
+.note-eyebrow { display: inline-flex; align-items: center; gap: 10px; font-size: 10px; font-weight: 600; letter-spacing: 2.6px; color: #F7892F; }
+.note-eyebrow::before { content: ""; width: 22px; height: 2px; background: var(--orange); }
+.note-text { padding-right: 18px; font-family: "Montserrat", sans-serif; font-weight: 700; font-size: 17px; line-height: 1.35; transition: opacity .18s; position: relative; z-index: 1; }
+.note-text.swap { opacity: 0; }
+.note-sign { align-self: flex-end; font-family: "Montserrat", sans-serif; font-weight: 800; font-size: 13px; letter-spacing: 1px; color: #F7892F; position: relative; z-index: 1; }
+.note-sign i { font-style: normal; }
+.quote { font-size: 13.5px; line-height: 1.45; color: var(--ink-3); padding: 0 4px; font-style: italic; }
+.quote b { font-style: normal; font-weight: 800; color: var(--orange-ink); white-space: nowrap; }
+.cheer { position: fixed; left: 50%; top: calc(14px + env(safe-area-inset-top)); transform: translateX(-50%); z-index: 90; width: min(420px, calc(100% - 32px));
+  display: flex; flex-direction: column; gap: 4px; padding: 14px 16px; border-radius: 18px; background: var(--ink); color: #fff;
+  box-shadow: 0 14px 30px rgba(30,34,38,.28); border-left: 4px solid var(--orange); animation: cheerIn .45s var(--ease) both; }
+.cheer span { font-family: "Montserrat", sans-serif; font-weight: 700; font-size: 14.5px; line-height: 1.35; }
+.cheer b { align-self: flex-end; font-size: 12px; letter-spacing: 1px; color: #F7892F; }
+.cheer.out { opacity: 0; transform: translate(-50%, -12px); transition: all .35s ease; }
+@keyframes cheerIn { from { opacity: 0; transform: translate(-50%, -16px); } to { opacity: 1; transform: translate(-50%, 0); } }
